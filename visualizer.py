@@ -61,7 +61,7 @@ class Visualizer:
         # window settings
         self.w = KeyPressWindow()
         self.w.setWindowTitle("pyqtgraph visualizer")
-        self.w.setGeometry(0, 50, 960, 540)
+        self.w.setGeometry(0, 50, 1280, 720)
 
         # initial camera settings
         self.ball_cam = True
@@ -97,7 +97,7 @@ class Visualizer:
 
         # setup rocketsim cars
         self.car_ids = []
-        for i in range(1):
+        for i in range(2):
             team = Team.Blue if i % 2 else Team.Orange
             car_id = self.arena.add_car(team, CarConfig.Octane)
             self.car_ids.append(car_id)
@@ -113,7 +113,7 @@ class Visualizer:
             car.pos = Vec3(car_id * 75, car_id * 75, 25)  # don't spawn in the same place
             self.arena.set_car(car_id, car)
             team = i % 2  # workaround until we get car.team
-            car_color = (0, 0.5, 1, 1) if team == 0 else (1, 0.25, 0, 1)
+            car_color = (0, 0.4, 0.8, 1) if team == 0 else (1, 0.2, 0.1, 1)
             car_mesh = gl.GLMeshItem(meshdata=md, smooth=False, drawFaces=True,
                                      drawEdges=True, color=car_color, edgeColor=(1, 1, 1, 1))
             self.cars.append(car_mesh)
@@ -123,7 +123,7 @@ class Visualizer:
         # Create ball geometry
         ball_md = gl.MeshData.sphere(rows=8, cols=16, radius=91.25)
         self.ball = gl.GLMeshItem(
-            meshdata=ball_md, smooth=False, drawFaces=False, drawEdges=True, edgeColor=(1, 1, 1, 1), color=(0.5, 0.5, 0.5, 1)
+            meshdata=ball_md, smooth=False, drawFaces=True, drawEdges=True, edgeColor=(1, 1, 1, 1), color=(0.1, 0.1, 0.1, 1)
         )
         self.w.addItem(self.ball)
 
@@ -220,8 +220,10 @@ class Visualizer:
                                            elevation=-smaller_ball_elevation / math.pi * 180)
                 else:
                     # car cam
-                    car_vel_azimuth = math.atan2(car_vel.y, car_vel.x)
-                    self.w.setCameraParams(azimuth=-car_vel_azimuth / math.pi * 180)
+                    car_vel_2d_norm = math.sqrt(car_vel.y ** 2 + car_vel.x ** 2)
+                    if car_vel_2d_norm > 100:  # don't be sensitive to near 0 vel dir changes
+                        car_vel_azimuth = math.atan2(car_vel.y, car_vel.x)
+                        self.w.setCameraParams(elevation=10, azimuth=-car_vel_azimuth / math.pi * 180)
 
     def update(self):
         # start_time = time.time_ns()
