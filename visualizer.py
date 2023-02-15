@@ -12,6 +12,7 @@ import math
 
 from collections import defaultdict
 
+# TODO: put these settings in a .ini file
 INPUT_KEYS = {"Z": "FORWARD",
               "S": "BACKWARD",
               "D": "RIGHT",
@@ -57,7 +58,16 @@ class KeyPressWindow(gl.GLViewWidget):
 
 
 class Visualizer:
-    def __init__(self):
+    def __init__(self, arena, car_ids,
+                 tick_rate=120, tick_skip=2,
+                 step_arena=True, overwrite_controls=True):
+        self.arena = arena
+        self.car_ids = car_ids
+        self.tick_rate = tick_rate
+        self.tick_skip = tick_skip
+        self.step_arena = step_arena
+        self.overwrite_controls = overwrite_controls
+
         self.app = pg.mkQApp()
 
         # window settings
@@ -84,27 +94,6 @@ class Visualizer:
         m4.rotate(90, 0, 0, 1)
         self.w.addItem(m4)
 
-        # setup rocketsim arena
-        self.tick_rate = 120
-        self.tick_skip = 2
-        self.arena = Arena(GameMode.Soccar, self.tick_rate)
-        print(f"Arena tick rate: {self.arena.get_tick_rate()}")
-
-        # setup ball initial state
-        ball = self.arena.get_ball()
-        ball.pos = Vec3(500, 500, 1500)
-        ball.vel = Vec3(0, 0, 0.1)
-        self.arena.ball = ball
-        print("Set ball state")
-
-        # setup rocketsim cars
-        self.car_ids = []
-        for i in range(2):
-            team = Team.Blue if i % 2 else Team.Orange
-            car_id = self.arena.add_car(team, CarConfig.Octane)
-            self.car_ids.append(car_id)
-            print(f"Car added to team {team} with id {car_id}")
-
         # index of the car we control/spectate
         self.car_index = 0
 
@@ -115,7 +104,7 @@ class Visualizer:
         self.cars = []
         for i, car_id in enumerate(self.car_ids):
             car = self.arena.get_car(car_id)
-            car.pos = Vec3(car_id * 75, car_id * 75, 25)  # don"t spawn in the same place
+            car.pos = Vec3(car_id * 75, car_id * 75, 25)  # don't spawn in the same place
             self.arena.set_car(car_id, car)
             team = i % 2  # workaround until we get car.team
             car_color = (0, 0.4, 0.8, 1) if team == 0 else (1, 0.2, 0.1, 1)
@@ -229,7 +218,7 @@ class Visualizer:
                 else:
                     # car cam
                     car_vel_2d_norm = math.sqrt(car_vel.y ** 2 + car_vel.x ** 2)
-                    if car_vel_2d_norm > 50:  # don"t be sensitive to near 0 vel dir changes
+                    if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
                         car_vel_azimuth = math.atan2(car_vel.y, car_vel.x)
                         self.w.setCameraParams(azimuth=-car_vel_azimuth / math.pi * 180,
                                                elevation=CAM_ANGLE)
@@ -238,18 +227,18 @@ class Visualizer:
         # start_time = time.time_ns()
 
         my_car_id = self.car_ids[self.car_index]
-        car = self.arena.get_car(my_car_id)
-        car.boost = 100
-        self.arena.set_car(my_car_id, car)
-        self.arena.set_car_controls(my_car_id, self.controls)
 
-        self.arena.step(self.tick_skip)
+        if self.overwrite_controls:
+            self.arena.set_car_controls(my_car_id, self.controls)
+
+        if self.step_arena:
+            self.arena.step(self.tick_skip)
 
         self.set_plot_data()
 
         # end_time = time.time_ns()
 
-    def animation(self):
+    def animation(self, step_arena=False):
         timer = QtCore.QTimer()
         timer.timeout.connect(self.update)
         timer.start(16)
@@ -257,8 +246,36 @@ class Visualizer:
 
 
 def main():
-    v = Visualizer()
-    v.animation()
+
+    # setup rocketsim arena
+    tick_rate = 120
+    tick_skip = 2
+    arena = Arena(GameMode.Soccar, tick_rate)
+    print(f"Arena tick rate: {arena.get_tick_rate()}")
+
+    # setup ball initial state
+    ball = arena.get_ball()
+    ball.pos = Vec3(500, 500, 1500)
+    ball.vel = Vec3(0, 0, 0.1)
+    arena.ball = ball
+    print("Set ball state")
+
+    # setup rocketsim cars
+    car_ids = []
+    for i in range(2):
+        team = Team.Blue if i % 2 else Team.Orange
+        car_id = arena.add_car(team, CarConfig.Octane)
+
+        # workaround to set unlimited boost
+        car = arena.get_car(car_id)
+        car.boost = 1e8
+        arena.set_car(car_id, car)
+
+        car_ids.append(car_id)
+        print(f"Car added to team {team} with id {car_id}")
+
+    v = Visualizer(arena, car_ids, tick_rate=tick_rate, tick_skip=tick_skip)
+    v.animation()  # set to False in case tick updates happen elsewhere
 
 
 # Start Qt event loop unless running in interactive mode.
