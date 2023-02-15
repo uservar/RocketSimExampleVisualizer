@@ -23,7 +23,7 @@ INPUT_KEYS = {"Z": "FORWARD",
               "I": "POWERSLIDE",
               "M": "BOOST",
               "B": "BALL_CAM",
-              "Space": "CYCLE"}
+              "Space": "SWITCH_CAR"}
 
 CAM_FOV = 110
 CAM_DISTANCE = 270
@@ -123,8 +123,14 @@ class Visualizer:
         self.controls = CarControls()
         self.w.sigKeyPress.connect(self.update_controls)
         self.w.sigKeyRelease.connect(self.release_controls)
+        self.app.focusChanged.connect(self.reset_controls)
 
         self.update()
+
+    def reset_controls(self):
+        for key in self.is_pressed_dict.keys():
+            self.is_pressed_dict[key] = False
+        self.controls = CarControls()
 
     def release_controls(self, event):
         self.update_controls(event, is_pressed=False)
@@ -134,7 +140,9 @@ class Visualizer:
         if key in INPUT_KEYS.keys():
             self.is_pressed_dict[INPUT_KEYS[key]] = is_pressed
 
-        if key in INPUT_KEYS.keys() and INPUT_KEYS[key] == "CYCLE" and is_pressed:
+        if key in INPUT_KEYS.keys() and INPUT_KEYS[key] == "SWITCH_CAR" and is_pressed:
+            if self.overwrite_controls:  # reset car controls before switching cars
+                self.arena.set_car_controls(self.car_ids[self.car_index], CarControls())
             self.car_index = (self.car_index + 1) % len(self.cars)
 
         if key in INPUT_KEYS.keys() and INPUT_KEYS[key] == "BALL_CAM" and is_pressed:
@@ -224,8 +232,7 @@ class Visualizer:
         # start_time = time.time_ns()
 
         if self.overwrite_controls:
-            my_car_id = self.car_ids[self.car_index]
-            self.arena.set_car_controls(my_car_id, self.controls)
+            self.arena.set_car_controls(self.car_ids[self.car_index], self.controls)
 
         if self.step_arena:
             self.arena.step(self.tick_skip)
