@@ -25,7 +25,8 @@ INPUT_KEYS = {'Z': 'FORWARD',
 
 CAM_FOV = 110
 CAM_DISTANCE = 270
-CAM_HEIGHT = 100
+CAM_HEIGHT = 110
+CAM_ANGLE = 3
 
 # Get key mappings from Qt namespace
 qt_keys = (
@@ -217,13 +218,14 @@ class Visualizer:
                     smaller_ball_elevation = ball_elevation * 0.5
 
                     self.w.setCameraParams(azimuth=-ball_azimuth / math.pi * 180,
-                                           elevation=-smaller_ball_elevation / math.pi * 180)
+                                           elevation=CAM_ANGLE - smaller_ball_elevation / math.pi * 180)
                 else:
                     # car cam
                     car_vel_2d_norm = math.sqrt(car_vel.y ** 2 + car_vel.x ** 2)
-                    if car_vel_2d_norm > 100:  # don't be sensitive to near 0 vel dir changes
+                    if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
                         car_vel_azimuth = math.atan2(car_vel.y, car_vel.x)
-                        self.w.setCameraParams(elevation=10, azimuth=-car_vel_azimuth / math.pi * 180)
+                        self.w.setCameraParams(azimuth=-car_vel_azimuth / math.pi * 180,
+                                               elevation=CAM_ANGLE)
 
     def update(self):
         # start_time = time.time_ns()
