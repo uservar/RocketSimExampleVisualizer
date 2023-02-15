@@ -1,6 +1,6 @@
-# RocketSimExampleVisualiser
+# RocketSimExampleVisualizer
 
-A visualiser for Rocketsim using pyqtgraph
+A visualizer for Rocketsim using pyqtgraph
 
 ## Credits
 
