@@ -226,9 +226,8 @@ class Visualizer:
     def update(self):
         # start_time = time.time_ns()
 
-        my_car_id = self.car_ids[self.car_index]
-
         if self.overwrite_controls:
+            my_car_id = self.car_ids[self.car_index]
             self.arena.set_car_controls(my_car_id, self.controls)
 
         if self.step_arena:
@@ -274,10 +273,11 @@ def main():
         car_ids.append(car_id)
         print(f"Car added to team {team} with id {car_id}")
 
-    v = Visualizer(arena, car_ids, tick_rate=tick_rate, tick_skip=tick_skip)
-    v.animation()  # set to False in case tick updates happen elsewhere
+    v = Visualizer(arena, car_ids, tick_rate=tick_rate, tick_skip=tick_skip,
+                   step_arena=True,  # set to False in case tick updates happen elsewhere
+                   overwrite_controls=True)
+    v.animation()
 
 
-# Start Qt event loop unless running in interactive mode.
 if __name__ == "__main__":
     main()
