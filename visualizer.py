@@ -103,9 +103,6 @@ class Visualizer:
 
         self.cars = []
         for i, car_id in enumerate(self.car_ids):
-            car = self.arena.get_car(car_id)
-            car.pos = Vec3(car_id * 75, car_id * 75, 25)  # don't spawn in the same place
-            self.arena.set_car(car_id, car)
             team = i % 2  # workaround until we get car.team
             car_color = (0, 0.4, 0.8, 1) if team == 0 else (1, 0.2, 0.1, 1)
             car_mesh = gl.GLMeshItem(meshdata=md, smooth=False, drawFaces=True,
@@ -268,6 +265,7 @@ def main():
         # workaround to set unlimited boost
         car = arena.get_car(car_id)
         car.boost = 1e8
+        car.pos = Vec3(car_id * 75, car_id * 75, 25)  # don't spawn in the same place
         arena.set_car(car_id, car)
 
         car_ids.append(car_id)
