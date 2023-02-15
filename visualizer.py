@@ -1,7 +1,7 @@
 from rocketsim import Angle, Vec3
 from rocketsim.sim import Arena, CarConfig, GameMode, Team, CarControls
 
-from pyqtgraph.Qt import QtCore, QtGui
+from pyqtgraph.Qt import QtCore
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 import models.obj as obj
@@ -22,7 +22,8 @@ INPUT_KEYS = {"Z": "FORWARD",
               "U": "JUMP",
               "I": "POWERSLIDE",
               "M": "BOOST",
-              "B": "BALL_CAM",
+              "B": "TARGET_CAM",
+              "Tab": "CYCLE_TARGETS",
               "Space": "SWITCH_CAR"}
 
 CAM_FOV = 110
@@ -76,7 +77,7 @@ class Visualizer:
         self.w.setGeometry(0, 50, 1280, 720)
 
         # initial camera settings
-        self.ball_cam = True
+        self.TARGET_CAM = True
         self.w.opts["fov"] = CAM_FOV
         self.w.opts["distance"] = CAM_DISTANCE
         self.w.show()
@@ -93,6 +94,12 @@ class Visualizer:
         m4 = gl.GLMeshItem(meshdata=md, smooth=False, drawFaces=False, drawEdges=True, edgeColor=(1, 1, 1, 1))
         m4.rotate(90, 0, 0, 1)
         self.w.addItem(m4)
+
+        # Create ball geometry
+        ball_md = gl.MeshData.sphere(rows=8, cols=16, radius=91.25)
+        self.ball = gl.GLMeshItem(meshdata=ball_md, smooth=False, drawFaces=True, drawEdges=True,
+                                  edgeColor=(1, 1, 1, 1), color=(0.1, 0.1, 0.1, 1))
+        self.w.addItem(self.ball)
 
         # index of the car we control/spectate
         self.car_index = 0
@@ -111,12 +118,8 @@ class Visualizer:
             self.w.addItem(car_mesh)
             print(f"Car geometry added for id {car_id}")
 
-        # Create ball geometry
-        ball_md = gl.MeshData.sphere(rows=8, cols=16, radius=91.25)
-        self.ball = gl.GLMeshItem(
-            meshdata=ball_md, smooth=False, drawFaces=True, drawEdges=True, edgeColor=(1, 1, 1, 1), color=(0.1, 0.1, 0.1, 1)
-        )
-        self.w.addItem(self.ball)
+        # item to track with target cam
+        self.target_index = -1
 
         # connect key press events to update our controls
         self.is_pressed_dict = {input_key: False for input_key in INPUT_KEYS.values()}
@@ -126,6 +129,11 @@ class Visualizer:
         self.app.focusChanged.connect(self.reset_controls)
 
         self.update()
+
+    def get_targets(self):
+        targets = self.cars + [self.ball]
+        del targets[self.car_index]
+        return targets
 
     def reset_controls(self):
         for key in self.is_pressed_dict.keys():
@@ -140,13 +148,16 @@ class Visualizer:
         if key in INPUT_KEYS.keys():
             self.is_pressed_dict[INPUT_KEYS[key]] = is_pressed
 
-        if key in INPUT_KEYS.keys() and INPUT_KEYS[key] == "SWITCH_CAR" and is_pressed:
+        if INPUT_KEYS.get(key, None) == "SWITCH_CAR" and is_pressed:
             if self.overwrite_controls:  # reset car controls before switching cars
                 self.arena.set_car_controls(self.car_ids[self.car_index], CarControls())
             self.car_index = (self.car_index + 1) % len(self.cars)
 
-        if key in INPUT_KEYS.keys() and INPUT_KEYS[key] == "BALL_CAM" and is_pressed:
-            self.ball_cam = not self.ball_cam
+        if INPUT_KEYS.get(key, None) == "TARGET_CAM" and is_pressed:
+            self.TARGET_CAM = not self.TARGET_CAM
+
+        if INPUT_KEYS.get(key, None) == "CYCLE_TARGETS" and is_pressed:
+            self.target_index = (self.target_index + 1) % len(self.cars)
 
         self.controls.throttle = self.is_pressed_dict["FORWARD"] - self.is_pressed_dict["BACKWARD"]
         self.controls.steer = self.is_pressed_dict["RIGHT"] - self.is_pressed_dict["LEFT"]
@@ -204,24 +215,25 @@ class Visualizer:
                 # center camera around the car
                 self.w.opts["center"] = pg.Vector(-car_pos.x, car_pos.y, car_pos.z + CAM_HEIGHT)
 
-                # calculate ball cam values
-                if self.ball_cam:
+                # calculate target cam values
+                if self.TARGET_CAM:
                     cam_pos = self.w.cameraPosition()
-                    rel_ball_pos = ball_pos.x + cam_pos[0], ball_pos.y - cam_pos[1], ball_pos.z - cam_pos[2]
-                    rel_ball_pos_norm = np.linalg.norm(rel_ball_pos)
+                    target_pos = self.get_targets()[self.target_index].transform().matrix()[:3, 3]
+                    rel_target_pos = -target_pos[0] + cam_pos[0], target_pos[1] - cam_pos[1], target_pos[2] - cam_pos[2]
+                    rel_target_pos_norm = np.linalg.norm(rel_target_pos)
 
-                    ball_azimuth = math.atan2(rel_ball_pos[1], rel_ball_pos[0])
+                    target_azimuth = math.atan2(rel_target_pos[1], rel_target_pos[0])
 
-                    ball_elevation = 0
-                    if rel_ball_pos_norm != 0:
-                        ball_elevation = math.asin(rel_ball_pos[2] / rel_ball_pos_norm)
+                    target_elevation = 0
+                    if rel_target_pos_norm != 0:
+                        target_elevation = math.asin(rel_target_pos[2] / rel_target_pos_norm)
 
-                    smaller_ball_elevation = ball_elevation * 0.5
+                    smaller_target_elevation = target_elevation * 0.5
 
-                    self.w.setCameraParams(azimuth=-ball_azimuth / math.pi * 180,
-                                           elevation=CAM_ANGLE - smaller_ball_elevation / math.pi * 180)
+                    self.w.setCameraParams(azimuth=-target_azimuth / math.pi * 180,
+                                           elevation=CAM_ANGLE - smaller_target_elevation / math.pi * 180)
                 else:
-                    # car cam
+                    # car cam / first person view
                     car_vel_2d_norm = math.sqrt(car_vel.y ** 2 + car_vel.x ** 2)
                     if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
                         car_vel_azimuth = math.atan2(car_vel.y, car_vel.x)
@@ -231,7 +243,7 @@ class Visualizer:
     def update(self):
         # start_time = time.time_ns()
 
-        if self.overwrite_controls:
+        if self.overwrite_controls and self.car_ids:
             self.arena.set_car_controls(self.car_ids[self.car_index], self.controls)
 
         if self.step_arena:
