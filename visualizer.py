@@ -12,16 +12,17 @@ import math
 
 from collections import defaultdict
 
-INPUT_KEYS = {'Z': 'FORWARD',
-              'S': 'BACKWARD',
-              'D': 'RIGHT',
-              'Q': 'LEFT',
-              'Alt': 'ROLL_RIGHT',
-              'Shift': 'ROLL_LEFT',
-              'U': 'JUMP',
-              'I': 'POWERSLIDE',
-              'M': 'BOOST',
-              'B': 'BALL_CAM'}
+INPUT_KEYS = {"Z": "FORWARD",
+              "S": "BACKWARD",
+              "D": "RIGHT",
+              "Q": "LEFT",
+              "Alt": "ROLL_RIGHT",
+              "Shift": "ROLL_LEFT",
+              "U": "JUMP",
+              "I": "POWERSLIDE",
+              "M": "BOOST",
+              "B": "BALL_CAM",
+              "Space": "CYCLE"}
 
 CAM_FOV = 110
 CAM_DISTANCE = 270
@@ -104,6 +105,9 @@ class Visualizer:
             self.car_ids.append(car_id)
             print(f"Car added to team {team} with id {car_id}")
 
+        # index of the car we control/spectate
+        self.car_index = 0
+
         # Create car geometry
         car_object = obj.OBJ("models/Octane_decimated.obj")
         md = gl.MeshData(vertexes=car_object.vertices, faces=car_object.faces)
@@ -111,7 +115,7 @@ class Visualizer:
         self.cars = []
         for i, car_id in enumerate(self.car_ids):
             car = self.arena.get_car(car_id)
-            car.pos = Vec3(car_id * 75, car_id * 75, 25)  # don't spawn in the same place
+            car.pos = Vec3(car_id * 75, car_id * 75, 25)  # don"t spawn in the same place
             self.arena.set_car(car_id, car)
             team = i % 2  # workaround until we get car.team
             car_color = (0, 0.4, 0.8, 1) if team == 0 else (1, 0.2, 0.1, 1)
@@ -144,8 +148,11 @@ class Visualizer:
         if key in INPUT_KEYS.keys():
             self.is_pressed_dict[INPUT_KEYS[key]] = is_pressed
 
-        if key in INPUT_KEYS.keys() and INPUT_KEYS[key] == "BALL_CAM":
-            self.ball_cam = not self.ball_cam if is_pressed else self.ball_cam
+        if key in INPUT_KEYS.keys() and INPUT_KEYS[key] == "CYCLE" and is_pressed:
+            self.car_index = (self.car_index + 1) % len(self.cars)
+
+        if key in INPUT_KEYS.keys() and INPUT_KEYS[key] == "BALL_CAM" and is_pressed:
+            self.ball_cam = not self.ball_cam
 
         self.controls.throttle = self.is_pressed_dict["FORWARD"] - self.is_pressed_dict["BACKWARD"]
         self.controls.steer = self.is_pressed_dict["RIGHT"] - self.is_pressed_dict["LEFT"]
@@ -197,7 +204,7 @@ class Visualizer:
             self.cars[i].rotate(car_angles.roll / math.pi * 180, 1, 0, 0, local=True)
 
             # set camera around a certain car
-            if i == 0:
+            if i == self.car_index:
                 self.w.opts["fov"] = CAM_FOV + car.is_supersonic * 5
 
                 # center camera around the car
@@ -222,7 +229,7 @@ class Visualizer:
                 else:
                     # car cam
                     car_vel_2d_norm = math.sqrt(car_vel.y ** 2 + car_vel.x ** 2)
-                    if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
+                    if car_vel_2d_norm > 50:  # don"t be sensitive to near 0 vel dir changes
                         car_vel_azimuth = math.atan2(car_vel.y, car_vel.x)
                         self.w.setCameraParams(azimuth=-car_vel_azimuth / math.pi * 180,
                                                elevation=CAM_ANGLE)
@@ -230,7 +237,7 @@ class Visualizer:
     def update(self):
         # start_time = time.time_ns()
 
-        my_car_id = self.car_ids[0]
+        my_car_id = self.car_ids[self.car_index]
         car = self.arena.get_car(my_car_id)
         car.boost = 100
         self.arena.set_car(my_car_id, car)
