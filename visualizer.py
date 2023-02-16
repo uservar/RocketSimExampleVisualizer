@@ -12,24 +12,18 @@ import math
 
 from collections import defaultdict
 
-# TODO: put these settings in a .ini file
-INPUT_KEYS = {"Z": "FORWARD",
-              "S": "BACKWARD",
-              "D": "RIGHT",
-              "Q": "LEFT",
-              "Alt": "ROLL_RIGHT",
-              "Shift": "ROLL_LEFT",
-              "U": "JUMP",
-              "I": "POWERSLIDE",
-              "M": "BOOST",
-              "B": "TARGET_CAM",
-              "Tab": "CYCLE_TARGETS",
-              "Space": "SWITCH_CAR"}
+import pathlib
+import tomli
 
-CAM_FOV = 110
-CAM_DISTANCE = 270
-CAM_HEIGHT = 110
-CAM_ANGLE = 3
+# get user config file
+current_dir = pathlib.Path(__file__).parent
+config_file = current_dir / "config.toml"
+
+with config_file.open("rb") as file:
+    toml_dict = tomli.load(file)
+
+input_dict = toml_dict["INPUT"]
+cam_dict = toml_dict["CAMERA"]
 
 # Get key mappings from Qt namespace
 qt_keys = (
@@ -61,7 +55,7 @@ class KeyPressWindow(gl.GLViewWidget):
 class Visualizer:
     def __init__(self, arena, car_ids,
                  tick_rate=120, tick_skip=2,
-                 step_arena=True, overwrite_controls=True):
+                 step_arena=False, overwrite_controls=False):
         self.arena = arena
         self.car_ids = car_ids
         self.tick_rate = tick_rate
@@ -78,8 +72,8 @@ class Visualizer:
 
         # initial camera settings
         self.TARGET_CAM = True
-        self.w.opts["fov"] = CAM_FOV
-        self.w.opts["distance"] = CAM_DISTANCE
+        self.w.opts["fov"] = cam_dict["FOV"]
+        self.w.opts["distance"] = cam_dict["DISTANCE"]
         self.w.show()
 
         # Add ground grid
@@ -91,7 +85,8 @@ class Visualizer:
         # Create stadium 3d model
         stadium_object = obj.OBJ("models/field_simplified.obj")
         md = gl.MeshData(vertexes=stadium_object.vertices, faces=stadium_object.faces)
-        m4 = gl.GLMeshItem(meshdata=md, smooth=False, drawFaces=False, drawEdges=True, edgeColor=(1, 1, 1, 1))
+        m4 = gl.GLMeshItem(meshdata=md, smooth=False, drawFaces=False, drawEdges=True,
+                           edgeColor=(1, 1, 1, 1))
         m4.rotate(90, 0, 0, 1)
         self.w.addItem(m4)
 
@@ -122,7 +117,7 @@ class Visualizer:
         self.target_index = -1
 
         # connect key press events to update our controls
-        self.is_pressed_dict = {input_key: False for input_key in INPUT_KEYS.values()}
+        self.is_pressed_dict = {input_key: False for input_key in input_dict.values()}
         self.controls = CarControls()
         self.w.sigKeyPress.connect(self.update_controls)
         self.w.sigKeyRelease.connect(self.release_controls)
@@ -145,18 +140,18 @@ class Visualizer:
 
     def update_controls(self, event, is_pressed=True):
         key = keys_mapping[event.key()]
-        if key in INPUT_KEYS.keys():
-            self.is_pressed_dict[INPUT_KEYS[key]] = is_pressed
+        if key in input_dict.keys():
+            self.is_pressed_dict[input_dict[key]] = is_pressed
 
-        if INPUT_KEYS.get(key, None) == "SWITCH_CAR" and is_pressed:
+        if input_dict.get(key, None) == "SWITCH_CAR" and is_pressed:
             if self.overwrite_controls:  # reset car controls before switching cars
                 self.arena.set_car_controls(self.car_ids[self.car_index], CarControls())
             self.car_index = (self.car_index + 1) % len(self.cars)
 
-        if INPUT_KEYS.get(key, None) == "TARGET_CAM" and is_pressed:
+        if input_dict.get(key, None) == "TARGET_CAM" and is_pressed:
             self.TARGET_CAM = not self.TARGET_CAM
 
-        if INPUT_KEYS.get(key, None) == "CYCLE_TARGETS" and is_pressed:
+        if input_dict.get(key, None) == "CYCLE_TARGETS" and is_pressed:
             self.target_index = (self.target_index + 1) % len(self.cars)
 
         self.controls.throttle = self.is_pressed_dict["FORWARD"] - self.is_pressed_dict["BACKWARD"]
@@ -210,10 +205,10 @@ class Visualizer:
 
             # set camera around a certain car
             if i == self.car_index:
-                self.w.opts["fov"] = CAM_FOV + car.is_supersonic * 5
+                self.w.opts["fov"] = cam_dict["FOV"] + car.is_supersonic * 5
 
                 # center camera around the car
-                self.w.opts["center"] = pg.Vector(-car_pos.x, car_pos.y, car_pos.z + CAM_HEIGHT)
+                self.w.opts["center"] = pg.Vector(-car_pos.x, car_pos.y, car_pos.z + cam_dict["HEIGHT"])
 
                 # calculate target cam values
                 if self.TARGET_CAM:
@@ -231,14 +226,14 @@ class Visualizer:
                     smaller_target_elevation = target_elevation * 0.5
 
                     self.w.setCameraParams(azimuth=-target_azimuth / math.pi * 180,
-                                           elevation=CAM_ANGLE - smaller_target_elevation / math.pi * 180)
+                                           elevation=cam_dict["ANGLE"] - smaller_target_elevation / math.pi * 180)
                 else:
                     # car cam / first person view
                     car_vel_2d_norm = math.sqrt(car_vel.y ** 2 + car_vel.x ** 2)
                     if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
                         car_vel_azimuth = math.atan2(car_vel.y, car_vel.x)
                         self.w.setCameraParams(azimuth=-car_vel_azimuth / math.pi * 180,
-                                               elevation=CAM_ANGLE)
+                                               elevation=cam_dict["ANGLE"])
 
     def update(self):
         # start_time = time.time_ns()
@@ -253,7 +248,7 @@ class Visualizer:
 
         # end_time = time.time_ns()
 
-    def animation(self, step_arena=False):
+    def animation(self):
         timer = QtCore.QTimer()
         timer.timeout.connect(self.update)
         timer.start(16)
@@ -281,10 +276,9 @@ def main():
         team = Team.Blue if i % 2 else Team.Orange
         car_id = arena.add_car(team, CarConfig.Octane)
 
-        # workaround to set unlimited boost
         car = arena.get_car(car_id)
-        car.boost = 1e8
-        car.pos = Vec3(car_id * 75, car_id * 75, 25)  # don't spawn in the same place
+        # car.boost = 1e8  # hack to set unlimited boost, might not work if it gets capped at 100
+        car.pos = Vec3(car_id * 75, car_id * 75, 17)  # don't spawn in the same place
         arena.set_car(car_id, car)
 
         car_ids.append(car_id)
