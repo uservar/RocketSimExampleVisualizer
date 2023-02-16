@@ -12,12 +12,12 @@ pip install - r requirements.txt
 
 ## Usage
 
-- If you just want to use this as a standalone program, simply run:
+If you just want to use this as a standalone program, simply run:
 ```
 python run_standalone.py
 ```
 
-- If you intend to use this in a pre-existing project, you can do something like this:
+If you intend to use this in a pre-existing project, you can do something like this:
 
 ```python
 from rocketsimvisualizer import Visualizer
