@@ -83,18 +83,20 @@ class Visualizer:
         gz.setSpacing(100, 100, 100)
         self.w.addItem(gz)
 
+        self.default_edge_color = (1, 1, 1, 1)
+
         # Create stadium 3d model
         stadium_object = obj.OBJ(current_dir / "models/field_simplified.obj")
         md = gl.MeshData(vertexes=stadium_object.vertices, faces=stadium_object.faces)
         m4 = gl.GLMeshItem(meshdata=md, smooth=False, drawFaces=False, drawEdges=True,
-                           edgeColor=(1, 1, 1, 1))
+                           edgeColor=self.default_edge_color)
         m4.rotate(90, 0, 0, 1)
         self.w.addItem(m4)
 
         # Create ball geometry
         ball_md = gl.MeshData.sphere(rows=8, cols=16, radius=91.25)
         self.ball = gl.GLMeshItem(meshdata=ball_md, smooth=False, drawFaces=True, drawEdges=True,
-                                  edgeColor=(1, 1, 1, 1), color=(0.1, 0.1, 0.1, 1))
+                                  edgeColor=self.default_edge_color, color=(0.1, 0.1, 0.1, 1))
         self.w.addItem(self.ball)
 
         # index of the car we control/spectate
@@ -108,8 +110,8 @@ class Visualizer:
         for i, car_id in enumerate(self.car_ids):
             team = i % 2  # workaround until we get car.team
             car_color = (0, 0.4, 0.8, 1) if team == 0 else (1, 0.2, 0.1, 1)
-            car_mesh = gl.GLMeshItem(meshdata=md, smooth=False, drawFaces=True,
-                                     drawEdges=True, color=car_color, edgeColor=(1, 1, 1, 1))
+            car_mesh = gl.GLMeshItem(meshdata=md, smooth=False, drawFaces=True, drawEdges=True,
+                                     color=car_color, edgeColor=self.default_edge_color)
             self.cars.append(car_mesh)
             self.w.addItem(car_mesh)
 
@@ -205,7 +207,7 @@ class Visualizer:
 
             # set camera around a certain car
             if i == self.car_index:
-                self.w.opts["fov"] = self.cam_dict["FOV"] + car.is_supersonic * 5
+                self.cars[i].opts["edgeColor"] = (0, 0, 0, 1) if car.is_supersonic else self.default_edge_color
 
                 # center camera around the car
                 self.w.opts["center"] = pg.Vector(-car_pos.x, car_pos.y, car_pos.z + self.cam_dict["HEIGHT"])
@@ -223,7 +225,7 @@ class Visualizer:
                     if rel_target_pos_norm != 0:
                         target_elevation = math.asin(rel_target_pos[2] / rel_target_pos_norm)
 
-                    smaller_target_elevation = target_elevation * 0.5
+                    smaller_target_elevation = target_elevation * 2 / 3
 
                     self.w.setCameraParams(azimuth=-target_azimuth / math.pi * 180,
                                            elevation=self.cam_dict["ANGLE"] - smaller_target_elevation / math.pi * 180)
