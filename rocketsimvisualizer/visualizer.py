@@ -8,7 +8,6 @@ import pyqtgraph.opengl as gl
 
 import numpy as np
 import math
-# import time
 
 from collections import defaultdict
 import pathlib
@@ -113,7 +112,6 @@ class Visualizer:
                                      drawEdges=True, color=car_color, edgeColor=(1, 1, 1, 1))
             self.cars.append(car_mesh)
             self.w.addItem(car_mesh)
-            print(f"Car geometry added for id {car_id}")
 
         # item to track with target cam
         self.target_index = -1
@@ -238,17 +236,16 @@ class Visualizer:
                                                elevation=self.cam_dict["ANGLE"])
 
     def update(self):
-        # start_time = time.time_ns()
 
+        # only set car controls if overwrite_controls is true and there's at least one car
         if self.overwrite_controls and self.car_ids:
             self.arena.set_car_controls(self.car_ids[self.car_index], self.controls)
 
+        # only call arena.step() if running in standalone mode
         if self.step_arena:
             self.arena.step(self.tick_skip)
 
         self.set_plot_data()
-
-        # end_time = time.time_ns()
 
     def animation(self):
         timer = QtCore.QTimer()

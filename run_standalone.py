@@ -31,8 +31,17 @@ def main():
         car_id = arena.add_car(team, CarConfig.Octane)
 
         car = arena.get_car(car_id)
-        car.boost = 1e8  # hack to set unlimited boost, might not work if it gets capped at 100
-        car.pos = Vec3(car_id * 75, car_id * 75, 17)  # don't spawn in the same place
+
+        # workaraound to set unlimited boost, might not work if it gets capped at 100
+        car.boost = 1e8
+        # don't spawn in the same place
+        car.pos = Vec3(car_id * 75, car_id * 75, 20)
+
+        # fix some weird initialization issues
+        car.is_jumping = False
+        car.has_jumped = False
+        car.has_flipped = False
+
         arena.set_car(car_id, car)
 
         car_ids.append(car_id)
