@@ -26,8 +26,3 @@ v.animation()
 ```
 
 Optionally you can change keyboard and camera settings by changing `rsvconfig.toml` or poviding your own `config_dict`
-
-## Credits
-
-Credit goes to drsoccer55(Douglas Sexton) for the original version this is adapted from
-https://www.youtube.com/watch?v=0-NoJ32nipw
