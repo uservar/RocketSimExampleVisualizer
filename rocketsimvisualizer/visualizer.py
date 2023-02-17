@@ -216,7 +216,7 @@ class Visualizer:
             self.cars[i].rotate(car_angles.roll / math.pi * 180, 1, 0, 0, local=True)
 
             # visual indicator for going supersonic
-            self.cars[self.car_index].opts["edgeColor"] = (0, 0, 0, 1) if car.is_supersonic else self.default_edge_color
+            self.cars[i].opts["edgeColor"] = (0, 0, 0, 1) if car.is_supersonic else self.default_edge_color
 
     def update_camera_data(self):
 
