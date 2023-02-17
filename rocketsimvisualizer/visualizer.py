@@ -72,7 +72,7 @@ class Visualizer:
         self.w.setGeometry(0, 50, 1280, 720)
 
         # initial camera settings
-        self.TARGET_CAM = True
+        self.target_cam = False
         self.w.opts["fov"] = self.cam_dict["FOV"]
         self.w.opts["distance"] = self.cam_dict["DISTANCE"]
         self.w.show()
@@ -99,9 +99,6 @@ class Visualizer:
                                   edgeColor=self.default_edge_color, color=(0.1, 0.1, 0.1, 1))
         self.w.addItem(self.ball)
 
-        # index of the car we control/spectate
-        self.car_index = 0
-
         # Create car geometry
         car_object = obj.OBJ(current_dir / "models/Octane_decimated.obj")
         car_md = gl.MeshData(vertexes=car_object.vertices, faces=car_object.faces)
@@ -114,8 +111,12 @@ class Visualizer:
                                      color=car_color, edgeColor=self.default_edge_color)
             self.cars.append(car_mesh)
             self.w.addItem(car_mesh)
-            car_debug_info = gl.GLTextItem(pos=(0, 0, 50))
-            car_debug_info.setParentItem(car_mesh)
+
+        # index of the car we control/spectate
+        self.car_index = 0
+
+        # # debug info
+        # self.debug_info = gl.GLTextItem(pos=(0, 0, 50))
 
         # item to track with target cam
         self.target_index = -1
@@ -129,10 +130,17 @@ class Visualizer:
 
         self.update()
 
-    def get_targets(self):
+    def get_cam_targets(self):
+        if not self.cars:
+            return [self.ball]
         targets = self.cars + [self.ball]
-        del targets[self.car_index]
+        targets.pop(self.car_index)
         return targets
+
+    def get_cam_target(self):
+        targets = self.get_cam_targets()
+        self.target_index = self.target_index % len(targets)
+        return targets[self.target_index]
 
     def reset_controls(self):
         for key in self.is_pressed_dict.keys():
@@ -153,10 +161,10 @@ class Visualizer:
             self.car_index = (self.car_index + 1) % len(self.cars)
 
         if self.input_dict.get(key, None) == "TARGET_CAM" and is_pressed:
-            self.TARGET_CAM = not self.TARGET_CAM
+            self.target_cam = not self.target_cam
 
         if self.input_dict.get(key, None) == "CYCLE_TARGETS" and is_pressed:
-            self.target_index = (self.target_index + 1) % len(self.cars)
+            self.target_index = (self.target_index + 1) % len(self.get_cam_targets())
 
         self.controls.throttle = self.is_pressed_dict["FORWARD"] - self.is_pressed_dict["BACKWARD"]
         self.controls.steer = self.is_pressed_dict["RIGHT"] - self.is_pressed_dict["LEFT"]
@@ -207,24 +215,15 @@ class Visualizer:
             self.cars[i].rotate(car_angles.pitch / math.pi * 180, 0, -1, 0, local=True)
             self.cars[i].rotate(car_angles.roll / math.pi * 180, 1, 0, 0, local=True)
 
+            # visual indicator for going supersonic
+            self.cars[self.car_index].opts["edgeColor"] = (0, 0, 0, 1) if car.is_supersonic else self.default_edge_color
+
     def update_camera_data(self):
 
-        car = self.arena.get_car(self.car_ids[self.car_index])
-        car_pos = car.get_pos()
-        car_vel = car.get_vel()
-
-        car_debug_info = f"{car.boost = }"
-        self.cars[self.car_index].childItems()[0].text = car_debug_info
-
-        self.cars[self.car_index].opts["edgeColor"] = (0, 0, 0, 1) if car.is_supersonic else self.default_edge_color
-
-        # center camera around the car
-        self.w.opts["center"] = pg.Vector(-car_pos.x, car_pos.y, car_pos.z + self.cam_dict["HEIGHT"])
-
         # calculate target cam values
-        if self.TARGET_CAM:
+        if self.target_cam:
             cam_pos = self.w.cameraPosition()
-            target_pos = self.get_targets()[self.target_index].transform().matrix()[:3, 3]
+            target_pos = self.get_cam_target().transform().matrix()[:3, 3]
             rel_target_pos = -target_pos[0] + cam_pos[0], target_pos[1] - cam_pos[1], target_pos[2] - cam_pos[2]
             rel_target_pos_norm = np.linalg.norm(rel_target_pos)
 
@@ -238,13 +237,27 @@ class Visualizer:
 
             self.w.setCameraParams(azimuth=-target_azimuth / math.pi * 180,
                                    elevation=self.cam_dict["ANGLE"] - smaller_target_elevation / math.pi * 180)
-        else:
-            # car cam / first person view
-            car_vel_2d_norm = math.sqrt(car_vel.y ** 2 + car_vel.x ** 2)
-            if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
-                car_vel_azimuth = math.atan2(car_vel.y, car_vel.x)
-                self.w.setCameraParams(azimuth=-car_vel_azimuth / math.pi * 180,
-                                       elevation=self.cam_dict["ANGLE"])
+
+        if self.cars:
+
+            car = self.arena.get_car(self.car_ids[self.car_index])
+            car_pos = car.get_pos()
+            car_vel = car.get_vel()
+
+            # center camera around the car
+            self.w.opts["center"] = pg.Vector(-car_pos.x, car_pos.y, car_pos.z + self.cam_dict["HEIGHT"])
+
+            # # debug info
+            # self.debug_info.setParentItem(self.cars[self.car_index])
+            # self.debug_info.text = f"{int(car.boost)=}"
+
+            if not self.target_cam:
+                # non-target_cam cam
+                car_vel_2d_norm = math.sqrt(car_vel.y ** 2 + car_vel.x ** 2)
+                if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
+                    car_vel_azimuth = math.atan2(car_vel.y, car_vel.x)
+                    self.w.setCameraParams(azimuth=-car_vel_azimuth / math.pi * 180,
+                                           elevation=self.cam_dict["ANGLE"])
 
     def update_plot_data(self):
         self.update_ball_data()
