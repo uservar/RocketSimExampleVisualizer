@@ -104,16 +104,18 @@ class Visualizer:
 
         # Create car geometry
         car_object = obj.OBJ(current_dir / "models/Octane_decimated.obj")
-        md = gl.MeshData(vertexes=car_object.vertices, faces=car_object.faces)
+        car_md = gl.MeshData(vertexes=car_object.vertices, faces=car_object.faces)
 
         self.cars = []
         for i, car_id in enumerate(self.car_ids):
             team = i % 2  # workaround until we get car.team
             car_color = (0, 0.4, 0.8, 1) if team == 0 else (1, 0.2, 0.1, 1)
-            car_mesh = gl.GLMeshItem(meshdata=md, smooth=False, drawFaces=True, drawEdges=True,
+            car_mesh = gl.GLMeshItem(meshdata=car_md, smooth=False, drawFaces=True, drawEdges=True,
                                      color=car_color, edgeColor=self.default_edge_color)
             self.cars.append(car_mesh)
             self.w.addItem(car_mesh)
+            car_debug_info = gl.GLTextItem(pos=(0, 0, 50))
+            car_debug_info.setParentItem(car_mesh)
 
         # item to track with target cam
         self.target_index = -1
@@ -165,7 +167,7 @@ class Visualizer:
         self.controls.handbrake = self.is_pressed_dict["POWERSLIDE"]
         self.controls.boost = self.is_pressed_dict["BOOST"]
 
-    def set_plot_data(self):
+    def update_ball_data(self):
 
         # plot ball data
         ball = self.arena.get_ball()
@@ -187,12 +189,12 @@ class Visualizer:
         self.ball.rotate(ball_delta_rot[0] / math.pi * 180, 0, 1, 0, local=True)
         self.ball.rotate(ball_delta_rot[1] / math.pi * 180, 1, 0, 0, local=True)
 
-        # plot car data
+    def update_cars_data(self):
+
         for i, car_id in enumerate(self.car_ids):
 
             car = self.arena.get_car(car_id)
             car_pos = car.get_pos()
-            car_vel = car.get_vel()
             car_angles = car.get_angles()
 
             self.cars[i].resetTransform()
@@ -205,37 +207,49 @@ class Visualizer:
             self.cars[i].rotate(car_angles.pitch / math.pi * 180, 0, -1, 0, local=True)
             self.cars[i].rotate(car_angles.roll / math.pi * 180, 1, 0, 0, local=True)
 
-            # set camera around a certain car
-            if i == self.car_index:
-                self.cars[i].opts["edgeColor"] = (0, 0, 0, 1) if car.is_supersonic else self.default_edge_color
+    def update_camera_data(self):
 
-                # center camera around the car
-                self.w.opts["center"] = pg.Vector(-car_pos.x, car_pos.y, car_pos.z + self.cam_dict["HEIGHT"])
+        car = self.arena.get_car(self.car_ids[self.car_index])
+        car_pos = car.get_pos()
+        car_vel = car.get_vel()
 
-                # calculate target cam values
-                if self.TARGET_CAM:
-                    cam_pos = self.w.cameraPosition()
-                    target_pos = self.get_targets()[self.target_index].transform().matrix()[:3, 3]
-                    rel_target_pos = -target_pos[0] + cam_pos[0], target_pos[1] - cam_pos[1], target_pos[2] - cam_pos[2]
-                    rel_target_pos_norm = np.linalg.norm(rel_target_pos)
+        car_debug_info = f"{car.boost = }"
+        self.cars[self.car_index].childItems()[0].text = car_debug_info
 
-                    target_azimuth = math.atan2(rel_target_pos[1], rel_target_pos[0])
+        self.cars[self.car_index].opts["edgeColor"] = (0, 0, 0, 1) if car.is_supersonic else self.default_edge_color
 
-                    target_elevation = 0
-                    if rel_target_pos_norm != 0:
-                        target_elevation = math.asin(rel_target_pos[2] / rel_target_pos_norm)
+        # center camera around the car
+        self.w.opts["center"] = pg.Vector(-car_pos.x, car_pos.y, car_pos.z + self.cam_dict["HEIGHT"])
 
-                    smaller_target_elevation = target_elevation * 2 / 3
+        # calculate target cam values
+        if self.TARGET_CAM:
+            cam_pos = self.w.cameraPosition()
+            target_pos = self.get_targets()[self.target_index].transform().matrix()[:3, 3]
+            rel_target_pos = -target_pos[0] + cam_pos[0], target_pos[1] - cam_pos[1], target_pos[2] - cam_pos[2]
+            rel_target_pos_norm = np.linalg.norm(rel_target_pos)
 
-                    self.w.setCameraParams(azimuth=-target_azimuth / math.pi * 180,
-                                           elevation=self.cam_dict["ANGLE"] - smaller_target_elevation / math.pi * 180)
-                else:
-                    # car cam / first person view
-                    car_vel_2d_norm = math.sqrt(car_vel.y ** 2 + car_vel.x ** 2)
-                    if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
-                        car_vel_azimuth = math.atan2(car_vel.y, car_vel.x)
-                        self.w.setCameraParams(azimuth=-car_vel_azimuth / math.pi * 180,
-                                               elevation=self.cam_dict["ANGLE"])
+            target_azimuth = math.atan2(rel_target_pos[1], rel_target_pos[0])
+
+            target_elevation = 0
+            if rel_target_pos_norm != 0:
+                target_elevation = math.asin(rel_target_pos[2] / rel_target_pos_norm)
+
+            smaller_target_elevation = target_elevation * 2 / 3
+
+            self.w.setCameraParams(azimuth=-target_azimuth / math.pi * 180,
+                                   elevation=self.cam_dict["ANGLE"] - smaller_target_elevation / math.pi * 180)
+        else:
+            # car cam / first person view
+            car_vel_2d_norm = math.sqrt(car_vel.y ** 2 + car_vel.x ** 2)
+            if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
+                car_vel_azimuth = math.atan2(car_vel.y, car_vel.x)
+                self.w.setCameraParams(azimuth=-car_vel_azimuth / math.pi * 180,
+                                       elevation=self.cam_dict["ANGLE"])
+
+    def update_plot_data(self):
+        self.update_ball_data()
+        self.update_cars_data()
+        self.update_camera_data()
 
     def update(self):
 
@@ -247,7 +261,7 @@ class Visualizer:
         if self.step_arena:
             self.arena.step(self.tick_skip)
 
-        self.set_plot_data()
+        self.update_plot_data()
 
     def animation(self):
         timer = QtCore.QTimer()
