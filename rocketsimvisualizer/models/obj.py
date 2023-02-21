@@ -1,6 +1,3 @@
-import numpy as np
-
-
 # Code from https://www.pygame.org/wiki/OBJFileLoader
 class OBJ:
     def __init__(self, filename):
@@ -40,6 +37,3 @@ class OBJ:
                     else:
                         norms.append(0)
                 self.faces.append(face)
-
-        self.vertices = np.array(self.vertices)
-        self.faces = np.array(self.faces)

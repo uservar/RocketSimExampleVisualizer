@@ -83,6 +83,9 @@ class Visualizer:
         gz.setSpacing(100, 100, 100)
         self.w.addItem(gz)
 
+        # debug info
+        self.text_item = gl.GLTextItem(pos=(0, 0, 60))
+
         self.default_edge_color = (1, 1, 1, 1)
 
         # Create stadium 3d model
@@ -99,9 +102,27 @@ class Visualizer:
                                   edgeColor=self.default_edge_color, color=(0.1, 0.1, 0.1, 1))
         self.w.addItem(self.ball)
 
+        # Create boost geometry
+        big_boost_md = gl.MeshData.cylinder(rows=1, cols=4, length=64, radius=160)
+        small_boost_md = gl.MeshData.cylinder(rows=1, cols=4, length=64, radius=144)
+
+        self.boost_pads = []
+        for i in range(arena.num_pads() - 1):
+            pad_is_big = arena.get_pad_is_big(i)
+            pad_pos = arena.get_pad_pos(i)
+            boost_md = big_boost_md if pad_is_big else small_boost_md
+            boost_mesh = gl.GLMeshItem(meshdata=boost_md, drawFaces=False, drawEdges=True,
+                                       edgeColor=self.default_edge_color)
+            boost_mesh.rotate(45, 0, 0, 1)
+            boost_mesh.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
+            self.w.addItem(boost_mesh)
+
         # Create car geometry
         car_object = obj.OBJ(current_dir / "models/Octane_decimated.obj")
-        car_md = gl.MeshData(vertexes=car_object.vertices, faces=car_object.faces)
+        car_hitbox = obj.OBJ(current_dir / "models/OctaneHitbox.obj")
+        combined_vertices = car_object.vertices + car_hitbox.vertices
+        combined_faces = car_object.faces + list(np.array(car_hitbox.faces) + len(car_object.vertices))
+        car_md = gl.MeshData(vertexes=combined_vertices, faces=combined_faces)
 
         self.cars = []
         for i, car_id in enumerate(self.car_ids):
@@ -109,14 +130,14 @@ class Visualizer:
             car_color = (0, 0.4, 0.8, 1) if team == 0 else (1, 0.2, 0.1, 1)
             car_mesh = gl.GLMeshItem(meshdata=car_md, smooth=False, drawFaces=True, drawEdges=True,
                                      color=car_color, edgeColor=self.default_edge_color)
+            axis_item = gl.GLAxisItem()
+            axis_item.setSize(100, 100, 100)
+            axis_item.setParentItem(car_mesh)
             self.cars.append(car_mesh)
             self.w.addItem(car_mesh)
 
         # index of the car we control/spectate
         self.car_index = 0
-
-        # # debug info
-        # self.debug_info = gl.GLTextItem(pos=(0, 0, 50))
 
         # item to track with target cam
         self.target_index = -1
@@ -247,9 +268,9 @@ class Visualizer:
             # center camera around the car
             self.w.opts["center"] = pg.Vector(-car_pos.x, car_pos.y, car_pos.z + self.cam_dict["HEIGHT"])
 
-            # # debug info
-            # self.debug_info.setParentItem(self.cars[self.car_index])
-            # self.debug_info.text = f"{int(car.boost)=}"
+            # debug info
+            self.text_item.text = f"{car.boost=:.0f}"
+            self.text_item.setParentItem(self.cars[self.car_index])
 
             if not self.target_cam:
                 # non-target_cam cam

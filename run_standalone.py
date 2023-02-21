@@ -32,12 +32,7 @@ def main():
 
         car = arena.get_car(car_id)
         car.boost = 100
-        car.pos = Vec3(car_id * 75, car_id * 75, 20)  # don't spawn in the same place
-
-        # fix some weird initialization issues
-        car.is_jumping = False
-        car.has_jumped = False
-        car.has_flipped = False
+        car.pos = Vec3(car_id * 90, car_id * 90, 18)  # don't spawn in the same place
 
         arena.set_car(car_id, car)
 
