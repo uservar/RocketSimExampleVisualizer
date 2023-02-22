@@ -119,20 +119,24 @@ class Visualizer:
 
         # Create car geometry
         car_object = obj.OBJ(current_dir / "models/Octane_decimated.obj")
-        car_hitbox = obj.OBJ(current_dir / "models/OctaneHitbox.obj")
-        combined_vertices = car_object.vertices + car_hitbox.vertices
-        combined_faces = car_object.faces + list(np.array(car_hitbox.faces) + len(car_object.vertices))
-        car_md = gl.MeshData(vertexes=combined_vertices, faces=combined_faces)
+        car_md = gl.MeshData(vertexes=car_object.vertices, faces=car_object.faces)
+
+        car_hitbox_object = obj.OBJ(current_dir / "models/OctaneHitbox.obj")
+        car_hitbox_md = gl.MeshData(vertexes=car_hitbox_object.vertices,
+                                    faces=car_hitbox_object.faces)
 
         self.cars = []
         for i, car_id in enumerate(self.car_ids):
             team = i % 2  # workaround until we get car.team
             car_color = (0, 0.4, 0.8, 1) if team == 0 else (1, 0.2, 0.1, 1)
-            car_mesh = gl.GLMeshItem(meshdata=car_md, smooth=False, drawFaces=True, drawEdges=True,
+            car_mesh = gl.GLMeshItem(meshdata=car_md, smooth=False,
+                                     drawFaces=True, drawEdges=True,
                                      color=car_color, edgeColor=self.default_edge_color)
-            axis_item = gl.GLAxisItem()
-            axis_item.setSize(100, 100, 100)
-            axis_item.setParentItem(car_mesh)
+
+            hitbox_mesh = gl.GLMeshItem(meshdata=car_hitbox_md, smooth=False,
+                                        drawFaces=False, drawEdges=True, color=car_color,
+                                        edgeColor=self.default_edge_color)
+            hitbox_mesh.setParentItem(car_mesh)
             self.cars.append(car_mesh)
             self.w.addItem(car_mesh)
 
@@ -274,7 +278,7 @@ class Visualizer:
             self.w.opts["center"] = pg.Vector(-car_pos.x, car_pos.y, car_pos.z + self.cam_dict["HEIGHT"])
 
             # debug info
-            self.text_item.text = f"{car.boost=:.0f}"
+            self.text_item.text = f"{car.boost=:.1f}"
             self.text_item.setParentItem(self.cars[self.car_index])
 
             if not self.target_cam:
