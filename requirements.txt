@@ -1,5 +1,4 @@
 PyQt5
 pyqtgraph
 pyopengl
-rocketsim==0.2.3
 tomli
