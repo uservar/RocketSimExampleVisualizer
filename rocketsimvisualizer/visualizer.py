@@ -103,19 +103,19 @@ class Visualizer:
         self.w.addItem(self.ball)
 
         # Create boost geometry
-        big_boost_md = gl.MeshData.cylinder(rows=1, cols=4, length=64, radius=160)
-        small_boost_md = gl.MeshData.cylinder(rows=1, cols=4, length=64, radius=144)
+        big_pad_md = gl.MeshData.cylinder(rows=1, cols=4, length=64, radius=160)
+        small_pad_md = gl.MeshData.cylinder(rows=1, cols=4, length=64, radius=144)
 
         self.boost_pads = []
-        for i in range(arena.num_pads() - 1):
-            pad_is_big = arena.get_pad_is_big(i)
-            pad_pos = arena.get_pad_pos(i)
-            boost_md = big_boost_md if pad_is_big else small_boost_md
-            boost_mesh = gl.GLMeshItem(meshdata=boost_md, drawFaces=False, drawEdges=True,
-                                       edgeColor=self.default_edge_color)
-            boost_mesh.rotate(45, 0, 0, 1)
-            boost_mesh.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
-            self.w.addItem(boost_mesh)
+        for i in range(arena.num_pads()):
+            pad = arena.get_pad_static(i)
+            pad_md = big_pad_md if pad.is_big else small_pad_md
+            pad_mi = gl.GLMeshItem(meshdata=pad_md, drawFaces=False, drawEdges=True,
+                                   edgeColor=self.default_edge_color)
+            pad_mi.rotate(45, 0, 0, 1)
+            pad_mi.translate(-pad.pos.x, pad.pos.y, pad.pos.z)
+            self.boost_pads.append(pad_mi)
+            self.w.addItem(pad_mi)
 
         # Create car geometry
         car_object = obj.OBJ(current_dir / "models/Octane_decimated.obj")
@@ -195,6 +195,11 @@ class Visualizer:
         self.controls.jump = self.is_pressed_dict["JUMP"]
         self.controls.handbrake = self.is_pressed_dict["POWERSLIDE"]
         self.controls.boost = self.is_pressed_dict["BOOST"]
+
+    def update_boost_pad_data(self):
+        for i in range(self.arena.num_pads()):
+            pad_state = self.arena.get_pad_state(i)
+            self.boost_pads[i].show() if pad_state.is_active else self.boost_pads[i].hide()
 
     def update_ball_data(self):
 
@@ -281,6 +286,7 @@ class Visualizer:
                                            elevation=self.cam_dict["ANGLE"])
 
     def update_plot_data(self):
+        self.update_boost_pad_data()
         self.update_ball_data()
         self.update_cars_data()
         self.update_camera_data()
