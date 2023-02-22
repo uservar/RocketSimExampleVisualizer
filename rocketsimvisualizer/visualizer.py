@@ -101,6 +101,12 @@ class Visualizer:
                                   edgeColor=self.default_edge_color, color=(0.1, 0.1, 0.1, 1))
         self.w.addItem(self.ball)
 
+        # Create ground projection for the ball
+        ball_proj_md = gl.MeshData.cylinder(rows=1, cols=16, length=0, radius=round(ball_radius))
+        self.ball_proj = gl.GLMeshItem(meshdata=ball_proj_md, smooth=False, drawFaces=False,
+                                       drawEdges=True, edgeColor=self.default_edge_color)
+        self.w.addItem(self.ball_proj)
+
         # Create boost geometry
         big_pad_md = gl.MeshData.cylinder(rows=1, cols=4, length=64, radius=160)
         small_pad_md = gl.MeshData.cylinder(rows=1, cols=4, length=64, radius=144)
@@ -222,6 +228,10 @@ class Visualizer:
         self.ball.rotate(ball_delta_rot[2] / math.pi * 180, 0, 0, -1, local=True)
         self.ball.rotate(ball_delta_rot[0] / math.pi * 180, 0, 1, 0, local=True)
         self.ball.rotate(ball_delta_rot[1] / math.pi * 180, 1, 0, 0, local=True)
+
+        # ball ground projection
+        self.ball_proj.resetTransform()
+        self.ball_proj.translate(-ball_state.pos.x, ball_state.pos.y, 0)
 
     def update_cars_data(self):
 
