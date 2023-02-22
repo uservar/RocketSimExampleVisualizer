@@ -5,7 +5,7 @@ A visualizer for RocketSim using pyqtgraph
 ## Intallation
 
 ```
-git clone https: // github.com / uservar / RocketSimExampleVisualizer
+git clone https://github.com/uservar/RocketSimExampleVisualizer
 cd RocketSimExampleVisualizer
 pip install - r requirements.txt
 ```
