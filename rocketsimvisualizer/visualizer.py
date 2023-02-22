@@ -95,7 +95,8 @@ class Visualizer:
         self.w.addItem(m4)
 
         # Create ball geometry
-        ball_md = gl.MeshData.sphere(rows=8, cols=16, radius=91.25)
+        ball_radius = self.arena.ball.get_radius() * 50
+        ball_md = gl.MeshData.sphere(rows=8, cols=16, radius=ball_radius)
         self.ball = gl.GLMeshItem(meshdata=ball_md, smooth=False, drawFaces=True, drawEdges=True,
                                   edgeColor=self.default_edge_color, color=(0.1, 0.1, 0.1, 1))
         self.w.addItem(self.ball)
@@ -112,6 +113,7 @@ class Visualizer:
                                        edgeColor=self.default_edge_color)
             boost_mesh.rotate(45, 0, 0, 1)
             boost_mesh.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
+            self.boost_pads.append(boost_mesh)
             self.w.addItem(boost_mesh)
 
         # Create car geometry
@@ -178,7 +180,7 @@ class Visualizer:
 
         if self.input_dict.get(key, None) == "SWITCH_CAR" and is_pressed:
             if self.overwrite_controls:  # reset car controls before switching cars
-                self.arena.set_car_controls(self.car_ids[self.car_index], RocketSim.CarControls())
+                self.arena.get_cars()[self.car_index].set_controls(RocketSim.CarControls())
             self.car_index = (self.car_index + 1) % len(self.cars)
 
         if self.input_dict.get(key, None) == "TARGET_CAM" and is_pressed:
@@ -197,8 +199,8 @@ class Visualizer:
         self.controls.boost = self.is_pressed_dict["BOOST"]
 
     def update_boost_pad_data(self):
-        for i in range(self.arena.num_pads()):
-            pad_state = self.arena.get_pad_state(i)
+        for i, pad in enumerate(self.arena.get_boost_pads()):
+            pad_state = pad.get_state()
             self.boost_pads[i].show() if pad_state.is_active else self.boost_pads[i].hide()
 
     def update_ball_data(self):
@@ -226,7 +228,7 @@ class Visualizer:
         for i, car in enumerate(self.arena.get_cars()):
 
             car_state = car.get_state()
-            # car_angles = car_state.angles
+            car_angles = car_state.angles
 
             self.cars[i].resetTransform()
 
@@ -234,9 +236,9 @@ class Visualizer:
             self.cars[i].translate(-car_state.pos.x, car_state.pos.y, car_state.pos.z)
 
             # rotation
-            # self.cars[i].rotate(car_angles.yaw / math.pi * 180, 0, 0, -1, local=True)
-            # self.cars[i].rotate(car_angles.pitch / math.pi * 180, 0, -1, 0, local=True)
-            # self.cars[i].rotate(car_angles.roll / math.pi * 180, 1, 0, 0, local=True)
+            self.cars[i].rotate(car_angles.yaw / math.pi * 180, 0, 0, -1, local=True)
+            self.cars[i].rotate(car_angles.pitch / math.pi * 180, 0, -1, 0, local=True)
+            self.cars[i].rotate(car_angles.roll / math.pi * 180, 1, 0, 0, local=True)
 
             # visual indicator for going supersonic
             self.cars[i].opts["edgeColor"] = (0, 0, 0, 1) if car_state.is_supersonic else self.default_edge_color
@@ -271,7 +273,7 @@ class Visualizer:
                                               car_state.pos.z + self.cam_dict["HEIGHT"])
 
             # debug info
-            self.text_item.text = f"{car_state.boost=:.0f}"
+            self.text_item.text = f"{car_state.boost=:.1f}"
             self.text_item.setParentItem(self.cars[self.car_index])
 
             if not self.target_cam:
@@ -290,9 +292,9 @@ class Visualizer:
 
     def update(self):
 
-        # # only set car controls if overwrite_controls is true and there's at least one car
-        # if self.overwrite_controls and self.car_ids:
-        #     self.arena.set_car_controls(self.car_ids[self.car_index], self.controls)
+        # only set car controls if overwrite_controls is true and there's at least one car
+        if self.overwrite_controls and self.cars:
+            self.arena.get_cars()[self.car_index].set_controls(self.controls)
 
         # only call arena.step() if running in standalone mode
         if self.step_arena:
