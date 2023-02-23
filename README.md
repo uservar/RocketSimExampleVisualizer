@@ -7,7 +7,7 @@ A visualizer for RocketSim using pyqtgraph
 ```
 git clone https://github.com/uservar/RocketSimExampleVisualizer
 cd RocketSimExampleVisualizer
-pip install - r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Usage
@@ -21,7 +21,7 @@ If you intend to use this in a pre-existing project, you can do something like t
 
 ```python
 from rocketsimvisualizer import Visualizer
-v = Visualizer(arena, car_ids)
+v = Visualizer(arena)
 v.animation()
 ```
 
