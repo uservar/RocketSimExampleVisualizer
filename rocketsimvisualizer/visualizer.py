@@ -261,8 +261,8 @@ class Visualizer:
 
             # rotation
             self.cars_mi[i].rotate(car_angles.yaw / math.pi * 180, 0, 0, -1, local=True)
-            self.cars_mi[i].rotate(car_angles.pitch / math.pi * 180, 0, -1, 0, local=True)
-            self.cars_mi[i].rotate(car_angles.roll / math.pi * 180, 1, 0, 0, local=True)
+            self.cars_mi[i].rotate(car_angles.pitch / math.pi * 180, 0, 1, 0, local=True)
+            self.cars_mi[i].rotate(car_angles.roll / math.pi * 180, -1, 0, 0, local=True)
 
             # visual indicator for going supersonic
             self.cars_mi[i].opts["edgeColor"] = (0, 0, 0, 1) if car_state.is_supersonic else self.default_edge_color
