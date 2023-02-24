@@ -2,7 +2,7 @@
 
 A pyqtgraph visualizer for [RocketSim](https://github.com/ZealanL/RocketSim) uses a [version](https://github.com/uservar/RocketSim/tree/python) of mtheall's python [bindings](https://github.com/mtheall/RocketSim/tree/python)
 
-## Intallation
+## Installation
 
 ```
 git clone https://github.com/uservar/RocketSimExampleVisualizer
