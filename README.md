@@ -1,6 +1,6 @@
 # RocketSimExampleVisualizer
 
-A visualizer for RocketSim using pyqtgraph
+A pyqtgraph visualizer for [RocketSim](https://github.com/ZealanL/RocketSim) uses a [version](https://github.com/uservar/RocketSim/tree/python) of mtheall's python [bindings](https://github.com/mtheall/RocketSim/tree/python)
 
 ## Intallation
 
@@ -17,7 +17,7 @@ If you just want to use this as a standalone program, simply run:
 python run_standalone.py
 ```
 
-If you intend to use this in a pre-existing project, you can do something like this:
+Although untested, if you intend to use this in a pre-existing project you can try something like this:
 
 ```python
 from rocketsimvisualizer import Visualizer
