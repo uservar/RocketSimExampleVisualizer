@@ -7,8 +7,8 @@ class CompositeController(GenericController):
         self.kc = KeyboardController(input_dict)
         self.xc = XboxController(input_dict)
 
-        self.kc.switch_car = self.switch_car
-        self.kc.cycle_targets = self.cycle_targets
+        self.kc.switch_car = lambda *args: self.switch_car()
+        self.kc.cycle_targets = lambda *args: self.cycle_targets()
 
         self.xc.switch_car = self.switch_car
         self.xc.cycle_targets = self.cycle_targets

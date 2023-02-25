@@ -1,9 +1,11 @@
 from rocketsimvisualizer.models import obj
 from rocketsimvisualizer import KeyboardController
+from rocketsimvisualizer.constants import *
 
 from pyqtgraph.Qt import QtCore
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
+from OpenGL.GL import GL_DEPTH_TEST
 
 import RocketSim
 
@@ -50,15 +52,15 @@ class Visualizer:
 
         self.controller = controller_class(self.input_dict)
 
-        self.controller.switch_car = self.switch_car
-        self.controller.cycle_targets = self.cycle_targets
+        self.controller.switch_car = lambda *args: self.switch_car()
+        self.controller.cycle_targets = lambda *args: self.cycle_targets()
         self.app.focusChanged.connect(self.controller.reset_controls)
 
         self.car_index = 0  # index of the car we control/spectate
         self.target_index = -1  # item to track with target cam
 
-        self.blue_color = (0, 0.4, 0.8, 1)
-        self.orange_color = (1, 0.2, 0.1, 1)
+        self.blue_color = np.array([0, 0.4, 0.8, 1])
+        self.orange_color = np.array([1, 0.2, 0.1, 1])
 
         # initial camera settings
         self.w.opts["fov"] = self.cam_dict["FOV"]
@@ -68,18 +70,19 @@ class Visualizer:
         # Add ground grid
         grid_item = gl.GLGridItem()
         grid_item.setSize(8192, 10240 + 880 * 2, 1)
-        grid_item.setSpacing(100, 100, 100)
+        grid_item.setSpacing(100, 100, 1)
         self.w.addItem(grid_item)
 
         # text info
         self.text_item = gl.GLTextItem(pos=(0, 0, 60))
+        self.text_item.setDepthValue(1)
 
         self.default_edge_color = (1, 1, 1, 1)
 
         # Create stadium 3d model
         stadium_object = obj.OBJ(current_dir / "models/field_simplified.obj")
-        stadium_md = gl.MeshData(vertexes=stadium_object.vertices, faces=stadium_object.faces)
-        stadium_mi = gl.GLMeshItem(meshdata=stadium_md, smooth=False, drawFaces=False, drawEdges=True,
+        stadium_mi = gl.GLMeshItem(vertexes=stadium_object.vertices, faces=stadium_object.faces,
+                                   smooth=False, drawFaces=False, drawEdges=True,
                                    edgeColor=self.default_edge_color)
         stadium_mi.rotate(90, 0, 0, 1)
         self.w.addItem(stadium_mi)
@@ -87,8 +90,10 @@ class Visualizer:
         # Create ball geometry
         ball_radius = self.arena.ball.get_radius() * 50
         ball_md = gl.MeshData.sphere(rows=8, cols=16, radius=ball_radius)
-        self.ball_mi = gl.GLMeshItem(meshdata=ball_md, smooth=False, drawFaces=True, drawEdges=True,
-                                     edgeColor=self.default_edge_color, color=(0.1, 0.1, 0.1, 1))
+        self.ball_mi = gl.GLMeshItem(meshdata=ball_md, smooth=False,
+                                     drawFaces=True, drawEdges=True,
+                                     color=(0.1, 0.1, 0.1, 1),
+                                     edgeColor=self.default_edge_color)
         self.w.addItem(self.ball_mi)
 
         # Create ground projection for the ball
@@ -98,52 +103,63 @@ class Visualizer:
         self.w.addItem(self.ball_proj)
 
         # Create boost geometry
-        big_pad_md = gl.MeshData.cylinder(rows=1, cols=4, length=64, radius=160)
-        small_pad_md = gl.MeshData.cylinder(rows=1, cols=4, length=64, radius=144)
+        big_pad_cyl_md = gl.MeshData.cylinder(rows=1, cols=16, length=pad_cyl_height,
+                                              radius=pad_cyl_rad_big)
+        small_pad_cyl_md = gl.MeshData.cylinder(rows=1, cols=16, length=pad_cyl_height,
+                                                radius=pad_cyl_rad_small)
 
         self.pads_mi = []
         for pad in arena.get_boost_pads():
             pad_pos = pad.get_pos()
-            pad_md = big_pad_md if pad.is_big else small_pad_md
-            pad_mi = gl.GLMeshItem(meshdata=pad_md, drawFaces=False, drawEdges=True,
-                                   edgeColor=self.default_edge_color)
-            pad_mi.rotate(45, 0, 0, 1)
-            pad_mi.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
-            self.pads_mi.append(pad_mi)
-            self.w.addItem(pad_mi)
+
+            # pad hitbox
+            # trimming the bottom half
+            pad_box_verts = box_verts * np.array([1, 1, 0.5]) + np.array([0, 0, 0.25])
+            pad_box_verts *= (pad_sq_dims_big if pad.is_big else pad_sq_dims_small)
+            pad_box_mi = gl.GLMeshItem(vertexes=pad_box_verts, faces=box_faces,
+                                       drawFaces=False, drawEdges=True,
+                                       edgeColor=self.default_edge_color)
+            pad_box_mi.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
+            self.pads_mi.append(pad_box_mi)
+            self.w.addItem(pad_box_mi)
+
+            # pad cylinder
+            pad_cyl_md = big_pad_cyl_md if pad.is_big else small_pad_cyl_md
+            pad_cyl_mi = gl.GLMeshItem(meshdata=pad_cyl_md, drawFaces=False, drawEdges=True,
+                                       edgeColor=self.default_edge_color)
+            pad_cyl_mi.rotate(45, 0, 0, 1)
+            pad_cyl_mi.setParentItem(pad_box_mi)
 
         # Create car geometry
-        car_object = obj.OBJ(current_dir / "models/Octane_decimated.obj")
-        car_md = gl.MeshData(vertexes=car_object.vertices, faces=car_object.faces)
-
         self.cars_mi = []
         for car in arena.get_cars():
 
             car_color = self.blue_color if car.team == 0 else self.orange_color
 
-            car_mi = gl.GLMeshItem(meshdata=car_md, smooth=False,
-                                   drawFaces=True, drawEdges=True,
-                                   color=car_color, edgeColor=self.default_edge_color)
-
-            self.cars_mi.append(car_mi)
-            self.w.addItem(car_mi)
-
-            # hitbox
+            # car hitbox as mesh
             car_config = car.get_config()
-            hitbox_size = car_config.hitbox_size
-            dia_conv = 1 / math.sqrt(2)
-            hitbox_offset = car_config.hitbox_pos_offset
-            car_hitbox_md = gl.MeshData.cylinder(rows=1, cols=4, radius=(dia_conv, dia_conv))
+            hitbox_size = np.array(car_config.hitbox_size.as_tuple())
+            hitbox_offset = np.array(car_config.hitbox_pos_offset.as_tuple())
+            hitbox_offset[0] *= -1
 
-            hitbox_mi = gl.GLMeshItem(meshdata=car_hitbox_md, smooth=False,
-                                      drawFaces=False, drawEdges=True,
-                                      edgeColor=self.default_edge_color)
+            hitbox_verts = box_verts * hitbox_size + hitbox_offset
+            hitbox_colors = box_colors * car_color
 
-            hitbox_mi.rotate(45, 0, 0, 1)
-            hitbox_mi.translate(0, 0, -0.5)  # by default cylinder origin z loc is at 0.5 length
-            hitbox_mi.scale(hitbox_size.x, hitbox_size.y, hitbox_size.z, local=False)
-            hitbox_mi.translate(-hitbox_offset.x, hitbox_offset.y, hitbox_offset.z, local=False)
-            hitbox_mi.setParentItem(car_mi)
+            car_mi = gl.GLMeshItem(vertexes=hitbox_verts, faces=box_faces,
+                                   smooth=False, drawFaces=True, drawEdges=True,
+                                   faceColors=hitbox_colors,
+                                   edgeColor=self.default_edge_color)
+
+            self.w.addItem(car_mi)
+            self.cars_mi.append(car_mi)
+
+            # axis item
+            axis_item = gl.GLAxisItem()
+            axis_item.rotate(90, 0, 0, 1)
+            axis_item.scale(32, 32, 32)
+            axis_item.setDepthValue(1)
+            axis_item.setGLOptions({GL_DEPTH_TEST: False})
+            axis_item.setParentItem(car_mi)
 
         self.update()
 
@@ -223,7 +239,8 @@ class Visualizer:
         if self.controller.target_cam:
             cam_pos = self.w.cameraPosition()
             target_pos = self.get_cam_target().transform().matrix()[:3, 3]
-            rel_target_pos = -target_pos[0] + cam_pos[0], target_pos[1] - cam_pos[1], target_pos[2] - cam_pos[2]
+            rel_target_pos = target_pos - cam_pos
+            rel_target_pos[0] *= -1
             rel_target_pos_norm = np.linalg.norm(rel_target_pos)
 
             target_azimuth = math.atan2(rel_target_pos[1], rel_target_pos[0])
@@ -275,7 +292,8 @@ class Visualizer:
             car_index = self.car_index % len(self.cars_mi)
             controls = self.controller.get_controls()
             controls.clamp_fix()
-            self.arena.get_cars()[car_index].set_controls(controls)
+            car = self.arena.get_cars()[car_index]
+            car.set_controls(controls)
 
         # only call arena.step() if running in standalone mode
         if self.step_arena:
