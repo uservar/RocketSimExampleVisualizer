@@ -20,9 +20,6 @@ with open(current_dir / "rsvconfig-default.toml", "rb") as file:
 
 
 class Visualizer:
-    sig_switch_car = QtCore.pyqtSignal(object)
-    sig_cycle_targets = QtCore.pyqtSignal(object)
-
     def __init__(self, arena,
                  tick_rate=120, tick_skip=2,
                  step_arena=False, overwrite_controls=False,
