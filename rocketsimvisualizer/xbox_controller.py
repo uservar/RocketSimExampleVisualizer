@@ -124,7 +124,7 @@ class XboxController(GenericController):
 
         if controls['Y'] and not self.y_pressed:
             self.target_cam = not self.target_cam
-            self.cpnty_pressed = True
+            self.y_pressed = True
 
         if controls['START'] and not self.start_pressed:
             self.start_pressed = True
