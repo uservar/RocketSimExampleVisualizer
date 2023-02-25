@@ -38,7 +38,7 @@ def main():
     v = Visualizer(arena, tick_rate=tick_rate, tick_skip=tick_skip,
                    step_arena=True,  # set to False in case tick updates happen elsewhere
                    overwrite_controls=True,
-                   config_dict=config_dict)
+                   config_dict=config_dict, kbm=True) #kbm flag manages if visualizer is controlled with keyboard or controller (xbox controller only)
     v.animation()
 
 
