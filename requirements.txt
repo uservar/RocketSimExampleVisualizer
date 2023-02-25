@@ -2,3 +2,4 @@ PyQt5
 pyqtgraph
 pyopengl
 tomli
+inputs
