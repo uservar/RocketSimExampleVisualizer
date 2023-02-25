@@ -1,6 +1,6 @@
 import RocketSim
 
-from rocketsimvisualizer import Visualizer
+from rocketsimvisualizer import Visualizer, CompositeController
 
 import tomli
 
@@ -9,7 +9,6 @@ with open("rsvconfig.toml", "rb") as file:
 
 
 def main():
-
     # setup rocketsim arena
     tick_rate = 120
     tick_skip = 2
@@ -35,10 +34,13 @@ def main():
         car.set_state(car_state)
         print(f"Car added to team {team} with id {car.id}")
 
+    # controller to use
+    controller_class = CompositeController
+
     v = Visualizer(arena, tick_rate=tick_rate, tick_skip=tick_skip,
                    step_arena=True,  # set to False in case tick updates happen elsewhere
                    overwrite_controls=True,
-                   config_dict=config_dict, kbm=True) #kbm flag manages if visualizer is controlled with keyboard or controller (xbox controller only)
+                   config_dict=config_dict, controller_class=controller_class)
     v.animation()
 
 

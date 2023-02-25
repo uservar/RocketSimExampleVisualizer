@@ -1,16 +1,15 @@
 from rocketsimvisualizer.models import obj
-import RocketSim
+from rocketsimvisualizer import KeyboardController
 
 from pyqtgraph.Qt import QtCore
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
+import RocketSim
+
 import numpy as np
 import math
 
-from controller import XboxController
-
-from collections import defaultdict
 import pathlib
 import tomli
 
@@ -19,66 +18,52 @@ current_dir = pathlib.Path(__file__).parent
 with open(current_dir / "rsvconfig-default.toml", "rb") as file:
     default_config_dict = tomli.load(file)
 
-# Get key mappings from Qt namespace
-qt_keys = (
-    (getattr(QtCore.Qt, attr), attr[4:])
-    for attr in dir(QtCore.Qt)
-    if attr.startswith("Key_")
-)
-keys_mapping = defaultdict(lambda: "unknown", qt_keys)
-
-
-class KeyPressWindow(gl.GLViewWidget):
-    sigKeyPress = QtCore.pyqtSignal(object)
-    sigKeyRelease = QtCore.pyqtSignal(object)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def keyPressEvent(self, event):
-        if event.isAutoRepeat():
-            return
-        self.sigKeyPress.emit(event)
-
-    def keyReleaseEvent(self, event):
-        if event.isAutoRepeat():
-            return
-        self.sigKeyRelease.emit(event)
-
 
 class Visualizer:
+    sig_switch_car = QtCore.pyqtSignal(object)
+    sig_cycle_targets = QtCore.pyqtSignal(object)
+
     def __init__(self, arena,
                  tick_rate=120, tick_skip=2,
                  step_arena=False, overwrite_controls=False,
-                 config_dict=None, kbm=True):
+                 config_dict=None, controller_class=None):
+
+        self.app = pg.mkQApp()
+        self.w = gl.GLViewWidget()
+        self.w.setWindowTitle("pyqtgraph visualizer")
+        self.w.setGeometry(0, 50, 1280, 720)
+        self.w.show()
+
         self.arena = arena
         self.tick_rate = tick_rate
         self.tick_skip = tick_skip
         self.step_arena = step_arena
         self.overwrite_controls = overwrite_controls
-        self.kbm = kbm
-        self.y_pressed = False
-        self.start_pressed = False
-        self.back_pressed = False
-        if kbm == False:
-            self.joy = XboxController()
+        self.config_dict = config_dict
 
-        if config_dict is None:
+        if self.config_dict is None:
             print("Using default configs")
-            config_dict = default_config_dict
+            self.config_dict = default_config_dict
 
-        self.input_dict = config_dict["INPUT"]
-        self.cam_dict = config_dict["CAMERA"]
+        self.cam_dict = self.config_dict["CAMERA"]
+        self.input_dict = self.config_dict["INPUT"]
 
-        self.app = pg.mkQApp()
+        if controller_class is None:
+            controller_class = KeyboardController
 
-        # window settings
-        self.w = KeyPressWindow()
-        self.w.setWindowTitle("pyqtgraph visualizer")
-        self.w.setGeometry(0, 50, 1280, 720)
+        self.controller = controller_class(self.input_dict)
+
+        self.controller.switch_car = self.switch_car
+        self.controller.cycle_targets = self.cycle_targets
+        self.app.focusChanged.connect(self.controller.reset_controls)
+
+        self.car_index = 0  # index of the car we control/spectate
+        self.target_index = -1  # item to track with target cam
+
+        self.blue_color = (0, 0.4, 0.8, 1)
+        self.orange_color = (1, 0.2, 0.1, 1)
 
         # initial camera settings
-        self.target_cam = False
         self.w.opts["fov"] = self.cam_dict["FOV"]
         self.w.opts["distance"] = self.cam_dict["DISTANCE"]
         self.w.show()
@@ -134,9 +119,6 @@ class Visualizer:
         car_object = obj.OBJ(current_dir / "models/Octane_decimated.obj")
         car_md = gl.MeshData(vertexes=car_object.vertices, faces=car_object.faces)
 
-        self.blue_color = (0, 0.4, 0.8, 1)
-        self.orange_color = (1, 0.2, 0.1, 1)
-
         self.cars_mi = []
         for car in arena.get_cars():
 
@@ -166,19 +148,6 @@ class Visualizer:
             hitbox_mi.translate(-hitbox_offset.x, hitbox_offset.y, hitbox_offset.z, local=False)
             hitbox_mi.setParentItem(car_mi)
 
-        # index of the car we control/spectate
-        self.car_index = 0
-
-        # item to track with target cam
-        self.target_index = -1
-
-        # connect key press events to update our controls
-        self.is_pressed_dict = {input_key: False for input_key in self.input_dict.values()}
-        self.controls = RocketSim.CarControls()
-        self.w.sigKeyPress.connect(self.update_controls)
-        self.w.sigKeyRelease.connect(self.release_controls)
-        self.app.focusChanged.connect(self.reset_controls)
-
         self.update()
 
     def get_cam_targets(self):
@@ -190,70 +159,17 @@ class Visualizer:
 
     def get_cam_target(self):
         targets = self.get_cam_targets()
-        self.target_index = self.target_index % len(targets)
         return targets[self.target_index]
 
-    def reset_controls(self):
-        for key in self.is_pressed_dict.keys():
-            self.is_pressed_dict[key] = False
-        self.controls = RocketSim.CarControls()
+    def cycle_targets(self):
+        targets = self.get_cam_targets()
+        self.target_index = (self.target_index + 1) % len(targets)
 
-    def release_controls(self, event):
-        self.update_controls(event, is_pressed=False)
-
-    def update_controls(self, event, is_pressed=True):
-        if self.kbm == True:
-            key = keys_mapping[event.key()]
-            if key in self.input_dict.keys():
-                self.is_pressed_dict[self.input_dict[key]] = is_pressed
-
-            if self.input_dict.get(key, None) == "SWITCH_CAR" and is_pressed:
-                if self.overwrite_controls:  # reset car controls before switching cars
-                    self.arena.get_cars()[self.car_index].set_controls(RocketSim.CarControls())
-                self.car_index = (self.car_index + 1) % len(self.cars_mi)
-
-            if self.input_dict.get(key, None) == "TARGET_CAM" and is_pressed:
-                self.target_cam = not self.target_cam
-
-            if self.input_dict.get(key, None) == "CYCLE_TARGETS" and is_pressed:
-                self.target_index = (self.target_index + 1) % len(self.get_cam_targets())
-
-            self.controls.throttle = self.is_pressed_dict["FORWARD"] - self.is_pressed_dict["BACKWARD"]
-            self.controls.steer = self.is_pressed_dict["RIGHT"] - self.is_pressed_dict["LEFT"]
-            self.controls.roll = self.is_pressed_dict["ROLL_RIGHT"] - self.is_pressed_dict["ROLL_LEFT"]
-            self.controls.pitch = -self.controls.throttle
-            self.controls.yaw = self.controls.steer
-            self.controls.jump = self.is_pressed_dict["JUMP"]
-            self.controls.handbrake = self.is_pressed_dict["POWERSLIDE"]
-            self.controls.boost = self.is_pressed_dict["BOOST"]
-        else:
-            controls = self.joy.read()
-            self.controls.throttle = controls['RT'] or -controls['LT']
-            self.controls.steer = controls["leftX"]
-            self.controls.roll = controls['RB'] or -controls['LB']
-            self.controls.pitch = -controls["leftY"]
-            self.controls.yaw = controls["leftX"]
-            self.controls.jump = controls["A"]
-            self.controls.handbrake = controls["X"]
-            self.controls.boost = controls["B"]
-            if controls['Y'] and self.y_pressed == False:
-                self.target_cam = not self.target_cam
-                self.y_pressed = True
-            if controls['START'] and self.start_pressed == False:
-                self.target_index = (self.target_index + 1) % len(self.get_cam_targets())
-                self.start_pressed = True
-            if controls['BACK'] and self.back_pressed == False:
-                self.back_pressed = True
-                if self.overwrite_controls:  # reset car controls before switching cars
-                    self.arena.get_cars()[self.car_index].set_controls(RocketSim.CarControls())
-                self.car_index = (self.car_index + 1) % len(self.cars_mi)
-            
-            if controls['START'] == False and self.start_pressed == True:
-                self.start_pressed = False     
-            if controls['BACK'] == False and self.back_pressed == True:
-                self.back_pressed == False
-            if controls['Y'] == False and self.y_pressed == True:
-                self.y_pressed = False
+    def switch_car(self):
+        if self.overwrite_controls:
+            # reset car controls before switching cars
+            self.arena.get_cars()[self.car_index].set_controls(RocketSim.CarControls())
+        self.car_index = (self.car_index + 1) % len(self.cars_mi)
 
     def update_boost_pad_data(self):
         for i, pad in enumerate(self.arena.get_boost_pads()):
@@ -307,7 +223,7 @@ class Visualizer:
     def update_camera_data(self):
 
         # calculate target cam values
-        if self.target_cam:
+        if self.controller.target_cam:
             cam_pos = self.w.cameraPosition()
             target_pos = self.get_cam_target().transform().matrix()[:3, 3]
             rel_target_pos = -target_pos[0] + cam_pos[0], target_pos[1] - cam_pos[1], target_pos[2] - cam_pos[2]
@@ -326,14 +242,15 @@ class Visualizer:
 
         if self.cars_mi:
 
-            car = self.arena.get_cars()[self.car_index]
+            car_index = self.car_index % len(self.cars_mi)
+            car = self.arena.get_cars()[car_index]
             car_state = car.get_state()
 
             # center camera around the car
             self.w.opts["center"] = pg.Vector(-car_state.pos.x, car_state.pos.y,
                                               car_state.pos.z + self.cam_dict["HEIGHT"])
 
-            if not self.target_cam:
+            if not self.controller.target_cam:
                 # non-target_cam cam
                 car_vel_2d_norm = math.sqrt(car_state.vel.y ** 2 + car_state.vel.x ** 2)
                 if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
@@ -343,9 +260,10 @@ class Visualizer:
 
     def update_text_data(self):
         if self.cars_mi:
-            car_state = self.arena.get_cars()[self.car_index].get_state()
+            car_index = self.car_index % len(self.cars_mi)
+            car_state = self.arena.get_cars()[car_index].get_state()
             self.text_item.text = f"{car_state.boost=:.1f}"
-            self.text_item.setParentItem(self.cars_mi[self.car_index])
+            self.text_item.setParentItem(self.cars_mi[car_index])
 
     def update_plot_data(self):
         self.update_boost_pad_data()
@@ -355,16 +273,17 @@ class Visualizer:
         self.update_text_data()
 
     def update(self):
-
         # only set car controls if overwrite_controls is true and there's at least one car
         if self.overwrite_controls and self.cars_mi:
-            self.arena.get_cars()[self.car_index].set_controls(self.controls)
+            car_index = self.car_index % len(self.cars_mi)
+            controls = self.controller.get_controls()
+            controls.clamp_fix()
+            self.arena.get_cars()[car_index].set_controls(controls)
 
         # only call arena.step() if running in standalone mode
         if self.step_arena:
             self.arena.step(self.tick_skip)
-        if self.kbm == False:
-            self.update_controls(None)
+
         self.update_plot_data()
 
     def animation(self):
