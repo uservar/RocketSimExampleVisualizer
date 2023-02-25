@@ -67,18 +67,18 @@ class XboxController(GenericController):
             for event in events:
                 if event.code == 'ABS_Y':
                     # normalize between -1 and 1
-                    self.LeftJoystickY = event.state / XboxController.MAX_JOY_VAL
+                    self.LeftJoystickY = event.state / MAX_JOY_VAL
                 elif event.code == 'ABS_X':
-                    self.LeftJoystickX = event.state / XboxController.MAX_JOY_VAL
+                    self.LeftJoystickX = event.state / MAX_JOY_VAL
                 elif event.code == 'ABS_RY':
-                    self.RightJoystickY = event.state / XboxController.MAX_JOY_VAL
+                    self.RightJoystickY = event.state / MAX_JOY_VAL
                 elif event.code == 'ABS_RX':
-                    self.RightJoystickX = event.state / XboxController.MAX_JOY_VAL
+                    self.RightJoystickX = event.state / MAX_JOY_VAL
                 elif event.code == 'ABS_Z':
                     # normalize between 0 and 1
-                    self.LeftTrigger = event.state / XboxController.MAX_TRIG_VAL
+                    self.LeftTrigger = event.state / MAX_TRIG_VAL
                 elif event.code == 'ABS_RZ':
-                    self.RightTrigger = event.state / XboxController.MAX_TRIG_VAL
+                    self.RightTrigger = event.state / MAX_TRIG_VAL
                 elif event.code == 'BTN_TL':
                     self.LeftBumper = event.state
                 elif event.code == 'BTN_TR':
