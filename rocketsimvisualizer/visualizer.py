@@ -8,6 +8,8 @@ import pyqtgraph.opengl as gl
 import numpy as np
 import math
 
+from controller import XboxController
+
 from collections import defaultdict
 import pathlib
 import tomli
@@ -48,12 +50,18 @@ class Visualizer:
     def __init__(self, arena,
                  tick_rate=120, tick_skip=2,
                  step_arena=False, overwrite_controls=False,
-                 config_dict=None):
+                 config_dict=None, kbm=True):
         self.arena = arena
         self.tick_rate = tick_rate
         self.tick_skip = tick_skip
         self.step_arena = step_arena
         self.overwrite_controls = overwrite_controls
+        self.kbm = kbm
+        self.y_pressed = False
+        self.start_pressed = False
+        self.back_pressed = False
+        if kbm == False:
+            self.joy = XboxController()
 
         if config_dict is None:
             print("Using default configs")
@@ -194,29 +202,58 @@ class Visualizer:
         self.update_controls(event, is_pressed=False)
 
     def update_controls(self, event, is_pressed=True):
-        key = keys_mapping[event.key()]
-        if key in self.input_dict.keys():
-            self.is_pressed_dict[self.input_dict[key]] = is_pressed
+        if self.kbm == True:
+            key = keys_mapping[event.key()]
+            if key in self.input_dict.keys():
+                self.is_pressed_dict[self.input_dict[key]] = is_pressed
 
-        if self.input_dict.get(key, None) == "SWITCH_CAR" and is_pressed:
-            if self.overwrite_controls:  # reset car controls before switching cars
-                self.arena.get_cars()[self.car_index].set_controls(RocketSim.CarControls())
-            self.car_index = (self.car_index + 1) % len(self.cars_mi)
+            if self.input_dict.get(key, None) == "SWITCH_CAR" and is_pressed:
+                if self.overwrite_controls:  # reset car controls before switching cars
+                    self.arena.get_cars()[self.car_index].set_controls(RocketSim.CarControls())
+                self.car_index = (self.car_index + 1) % len(self.cars_mi)
 
-        if self.input_dict.get(key, None) == "TARGET_CAM" and is_pressed:
-            self.target_cam = not self.target_cam
+            if self.input_dict.get(key, None) == "TARGET_CAM" and is_pressed:
+                self.target_cam = not self.target_cam
 
-        if self.input_dict.get(key, None) == "CYCLE_TARGETS" and is_pressed:
-            self.target_index = (self.target_index + 1) % len(self.get_cam_targets())
+            if self.input_dict.get(key, None) == "CYCLE_TARGETS" and is_pressed:
+                self.target_index = (self.target_index + 1) % len(self.get_cam_targets())
 
-        self.controls.throttle = self.is_pressed_dict["FORWARD"] - self.is_pressed_dict["BACKWARD"]
-        self.controls.steer = self.is_pressed_dict["RIGHT"] - self.is_pressed_dict["LEFT"]
-        self.controls.roll = self.is_pressed_dict["ROLL_RIGHT"] - self.is_pressed_dict["ROLL_LEFT"]
-        self.controls.pitch = -self.controls.throttle
-        self.controls.yaw = self.controls.steer
-        self.controls.jump = self.is_pressed_dict["JUMP"]
-        self.controls.handbrake = self.is_pressed_dict["POWERSLIDE"]
-        self.controls.boost = self.is_pressed_dict["BOOST"]
+            self.controls.throttle = self.is_pressed_dict["FORWARD"] - self.is_pressed_dict["BACKWARD"]
+            self.controls.steer = self.is_pressed_dict["RIGHT"] - self.is_pressed_dict["LEFT"]
+            self.controls.roll = self.is_pressed_dict["ROLL_RIGHT"] - self.is_pressed_dict["ROLL_LEFT"]
+            self.controls.pitch = -self.controls.throttle
+            self.controls.yaw = self.controls.steer
+            self.controls.jump = self.is_pressed_dict["JUMP"]
+            self.controls.handbrake = self.is_pressed_dict["POWERSLIDE"]
+            self.controls.boost = self.is_pressed_dict["BOOST"]
+        else:
+            controls = self.joy.read()
+            self.controls.throttle = controls['RT'] or -controls['LT']
+            self.controls.steer = controls["leftX"]
+            self.controls.roll = controls['RB'] or -controls['LB']
+            self.controls.pitch = -controls["leftY"]
+            self.controls.yaw = controls["leftX"]
+            self.controls.jump = controls["A"]
+            self.controls.handbrake = controls["X"]
+            self.controls.boost = controls["B"]
+            if controls['Y'] and self.y_pressed == False:
+                self.target_cam = not self.target_cam
+                self.y_pressed = True
+            if controls['START'] and self.start_pressed == False:
+                self.target_index = (self.target_index + 1) % len(self.get_cam_targets())
+                self.start_pressed = True
+            if controls['BACK'] and self.back_pressed == False:
+                self.back_pressed = True
+                if self.overwrite_controls:  # reset car controls before switching cars
+                    self.arena.get_cars()[self.car_index].set_controls(RocketSim.CarControls())
+                self.car_index = (self.car_index + 1) % len(self.cars_mi)
+            
+            if controls['START'] == False and self.start_pressed == True:
+                self.start_pressed = False     
+            if controls['BACK'] == False and self.back_pressed == True:
+                self.back_pressed == False
+            if controls['Y'] == False and self.y_pressed == True:
+                self.y_pressed = False
 
     def update_boost_pad_data(self):
         for i, pad in enumerate(self.arena.get_boost_pads()):
@@ -325,7 +362,8 @@ class Visualizer:
         # only call arena.step() if running in standalone mode
         if self.step_arena:
             self.arena.step(self.tick_skip)
-
+        if self.kbm == False:
+            self.update_controls(None)
         self.update_plot_data()
 
     def animation(self):
