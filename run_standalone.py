@@ -30,7 +30,7 @@ def main():
         car_state.boost = 100
         car_state.pos = RocketSim.Vec(car.id * 200, car.id * 200, 200)
         car_state.vel = RocketSim.Vec(100, 100, 100)
-        car_state.ang_vel = RocketSim.Vec(0, 0, 0)
+        car_state.ang_vel = RocketSim.Vec(0, 0, 5.5)
         car.set_state(car_state)
         print(f"Car added to team {team} with id {car.id}")
 
