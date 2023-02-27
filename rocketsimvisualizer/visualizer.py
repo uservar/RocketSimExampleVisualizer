@@ -166,7 +166,7 @@ class Visualizer:
                     wheel_pos[1] *= sign
                     wheel_radius = wheel_pair.wheel_radius
 
-                    wheel_md = gl.MeshData.cylinder(rows=1, cols=16, length=0,
+                    wheel_md = gl.MeshData.cylinder(rows=1, cols=16, length=0.1,
                                                     radius=(wheel_radius, wheel_radius))
                     wheel_mi = gl.GLMeshItem(meshdata=wheel_md, drawFaces=False, drawEdges=True,
                                              edgeColor=self.default_edge_color)
@@ -286,7 +286,8 @@ class Visualizer:
     def update_text_data(self):
         if self.cars_mi:
             car_index = self.car_index % len(self.cars_mi)
-            car_state = self.arena.get_cars()[car_index].get_state()
+            car = self.arena.get_cars()[car_index]
+            car_state = car.get_state()
             self.text_item.text = f"{car_state.boost=:.1f}"
             self.text_item.setParentItem(self.cars_mi[car_index])
 
