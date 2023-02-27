@@ -113,8 +113,7 @@ class Visualizer:
             pad_pos = pad.get_pos()
 
             # pad hitbox
-            # trimming the bottom half
-            pad_box_verts = box_verts * np.array([1, 1, 0.5]) + np.array([0, 0, 0.25])
+            pad_box_verts = box_verts * [1, 1, 0.5] + [0, 0, 0.25]  # trimming the bottom half
             pad_box_verts *= (pad_sq_dims_big if pad.is_big else pad_sq_dims_small)
             pad_box_mi = gl.GLMeshItem(vertexes=pad_box_verts, faces=box_faces,
                                        drawFaces=False, drawEdges=True,
@@ -140,9 +139,8 @@ class Visualizer:
             car_config = car.get_config()
             hitbox_size = np.array(car_config.hitbox_size.as_tuple())
             hitbox_offset = np.array(car_config.hitbox_pos_offset.as_tuple())
-            hitbox_offset[0] *= -1
 
-            hitbox_verts = box_verts * hitbox_size + hitbox_offset
+            hitbox_verts = box_verts * hitbox_size + hitbox_offset * [-1, 1, 1]
             hitbox_colors = box_colors * car_color
 
             car_mi = gl.GLMeshItem(vertexes=hitbox_verts, faces=box_faces,
@@ -156,10 +154,24 @@ class Visualizer:
             # axis item
             axis_item = gl.GLAxisItem()
             axis_item.rotate(90, 0, 0, 1)
-            axis_item.scale(32, 32, 32)
+            axis_item.scale(*(hitbox_size / 2 + hitbox_offset), local=False)
             axis_item.setDepthValue(1)
             axis_item.setGLOptions({GL_DEPTH_TEST: False})
             axis_item.setParentItem(car_mi)
+
+            # wheels
+            for wheel_pair in (car_config.front_wheels, car_config.back_wheels):
+                for sign in (1, -1):
+                    wheel_pos = -np.array(wheel_pair.connection_point_offset.as_tuple())
+                    wheel_pos[1] *= sign
+                    wheel_radius = wheel_pair.wheel_radius
+
+                    wheel_md = gl.MeshData.cylinder(rows=1, cols=16, length=0,
+                                                    radius=(wheel_radius, wheel_radius))
+                    wheel_mi = gl.GLMeshItem(meshdata=wheel_md, drawFaces=False, drawEdges=True,
+                                             edgeColor=self.default_edge_color)
+                    wheel_mi.translate(*wheel_pos)
+                    wheel_mi.setParentItem(car_mi)
 
         self.update()
 
@@ -239,8 +251,7 @@ class Visualizer:
         if self.controller.target_cam:
             cam_pos = self.w.cameraPosition()
             target_pos = self.get_cam_target().transform().matrix()[:3, 3]
-            rel_target_pos = target_pos - cam_pos
-            rel_target_pos[0] *= -1
+            rel_target_pos = (target_pos - cam_pos) * [-1, 1, 1]
             rel_target_pos_norm = np.linalg.norm(rel_target_pos)
 
             target_azimuth = math.atan2(rel_target_pos[1], rel_target_pos[0])
