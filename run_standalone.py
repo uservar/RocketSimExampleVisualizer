@@ -25,7 +25,7 @@ def main():
     # setup rocketsim cars
     for i in range(2):
         team = RocketSim.BLUE if i % 2 else RocketSim.ORANGE
-        car = arena.add_car(team)
+        car = arena.add_car(team, RocketSim.OCTANE)
         car_state = car.get_state()
         car_state.boost = 100
         car_state.pos = RocketSim.Vec(car.id * 200, car.id * 200, 200)
