@@ -1,5 +1,5 @@
 from rocketsimvisualizer.models import obj
-from rocketsimvisualizer import KeyboardController
+from rocketsimvisualizer import KeyboardController, GenericController
 from rocketsimvisualizer.constants import *
 
 from pyqtgraph.Qt import QtCore
@@ -52,8 +52,8 @@ class Visualizer:
 
         self.controller = controller_class(self.input_dict)
 
-        self.controller.switch_car = lambda *args: self.switch_car()
-        self.controller.cycle_targets = lambda *args: self.cycle_targets()
+        GenericController.switch_car = lambda *args: self.switch_car()
+        GenericController.cycle_targets = lambda *args: self.cycle_targets()
         self.app.focusChanged.connect(self.controller.reset_controls)
 
         self.car_index = 0  # index of the car we control/spectate
@@ -78,12 +78,13 @@ class Visualizer:
         self.text_item.setDepthValue(1)
 
         self.default_edge_color = (1, 1, 1, 1)
+        self.black_color = (0, 0, 0, 1)
 
         # Create stadium 3d model
         stadium_object = obj.OBJ(current_dir / "models/field_simplified.obj")
         stadium_mi = gl.GLMeshItem(vertexes=stadium_object.vertices, faces=stadium_object.faces,
                                    smooth=False, drawFaces=False, drawEdges=True,
-                                   edgeColor=self.default_edge_color)
+                                   color=self.black_color, edgeColor=self.default_edge_color)
         stadium_mi.rotate(90, 0, 0, 1)
         self.w.addItem(stadium_mi)
 
@@ -103,10 +104,10 @@ class Visualizer:
         self.w.addItem(self.ball_proj)
 
         # Create boost geometry
-        big_pad_cyl_md = gl.MeshData.cylinder(rows=1, cols=16, length=pad_cyl_height,
-                                              radius=pad_cyl_rad_big)
-        small_pad_cyl_md = gl.MeshData.cylinder(rows=1, cols=16, length=pad_cyl_height,
-                                                radius=pad_cyl_rad_small)
+        big_pad_cyl_md = gl.MeshData.cylinder(rows=1, cols=16, length=PAD_CYL_HEIGHT,
+                                              radius=pad_CYL_RAD_BIG)
+        small_pad_cyl_md = gl.MeshData.cylinder(rows=1, cols=16, length=PAD_CYL_HEIGHT,
+                                                radius=PAD_CYL_RAD_SMALL)
 
         self.pads_mi = []
         for pad in arena.get_boost_pads():
@@ -162,15 +163,16 @@ class Visualizer:
             # wheels
             for wheel_pair in (car_config.front_wheels, car_config.back_wheels):
                 for sign in (1, -1):
+                    wheel_radius = wheel_pair.wheel_radius
                     wheel_pos = -np.array(wheel_pair.connection_point_offset.as_tuple())
                     wheel_pos[1] *= sign
-                    wheel_radius = wheel_pair.wheel_radius
 
-                    wheel_md = gl.MeshData.cylinder(rows=1, cols=16, length=0.1,
-                                                    radius=(wheel_radius, wheel_radius))
+                    wheel_md = gl.MeshData.cylinder(rows=1, cols=8, length=0,
+                                                    radius=round(wheel_radius))
                     wheel_mi = gl.GLMeshItem(meshdata=wheel_md, drawFaces=False, drawEdges=True,
-                                             edgeColor=self.default_edge_color)
+                                             smooth=False, edgeColor=self.default_edge_color)
                     wheel_mi.translate(*wheel_pos)
+                    wheel_mi.rotate(90, 1, 0, 0, local=True)
                     wheel_mi.setParentItem(car_mi)
 
         self.update()

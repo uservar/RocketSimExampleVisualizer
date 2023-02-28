@@ -3,8 +3,6 @@ from rocketsimvisualizer import GenericController
 from pyqtgraph.Qt import QtCore, QtGui
 from collections import defaultdict
 
-import RocketSim
-
 
 # Get key mappings from Qt namespace
 qt_keys = (

@@ -17,9 +17,11 @@ class GenericController:
     def get_controls(self):
         return self.controls
 
-    # These two methods will be used as callbacks
-    def switch_car(self):
+    # These two methods will be overwritten later
+    @classmethod
+    def switch_car():
         pass
 
-    def cycle_targets(self):
+    @classmethod
+    def cycle_targets():
         pass

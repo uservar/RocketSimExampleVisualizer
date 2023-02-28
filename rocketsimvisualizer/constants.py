@@ -1,14 +1,19 @@
 import numpy as np
 
+
 # boost pad cylinder
-pad_cyl_height = 95
-pad_cyl_rad_big = 208
-pad_cyl_rad_small = 144
+PAD_CYL_HEIGHT = 95
+pad_CYL_RAD_BIG = 208
+PAD_CYL_RAD_SMALL = 144
 
 # boost pad box dimensions
+PAD_SQ_HEIGHT = 64
+PAD_SQ_RAD_BIG = 160
+PAD_SQ_RAD_SMALL = 120
+
 # multiplied by 2 because btBoxShape is initialized with half extents
-pad_sq_dims_big = np.array([160, 160, 64]) * 2
-pad_sq_dims_small = np.array([120, 120, 64]) * 2
+pad_sq_dims_big = np.array([PAD_SQ_RAD_BIG, PAD_SQ_RAD_BIG, PAD_SQ_HEIGHT]) * 2
+pad_sq_dims_small = np.array([PAD_SQ_RAD_SMALL, PAD_SQ_RAD_SMALL, PAD_SQ_HEIGHT]) * 2
 
 # box mesh data
 box_verts = np.array([
