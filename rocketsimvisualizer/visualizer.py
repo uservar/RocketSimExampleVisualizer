@@ -2,15 +2,18 @@ from rocketsimvisualizer import KeyboardController, GenericController
 from rocketsimvisualizer.constants import *
 from rocketsimvisualizer.soccar_field import *
 
-from pyqtgraph.Qt import QtCore
+from pyqtgraph.Qt import QtCore, QtGui
+from pyqtgraph.opengl.shaders import ShaderProgram, VertexShader, FragmentShader
+from OpenGL.GL import *
+
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
-from OpenGL.GL import GL_DEPTH_TEST
 
 import RocketSim
 
 import numpy as np
 import math
+import time
 
 import pathlib
 import tomli
@@ -19,6 +22,40 @@ current_dir = pathlib.Path(__file__).parent
 
 with open(current_dir / "rsvconfig-default.toml", "rb") as file:
     default_config_dict = tomli.load(file)
+
+# disable vsync
+_format = QtGui.QSurfaceFormat()
+_format.setSwapInterval(0)
+QtGui.QSurfaceFormat.setDefaultFormat(_format)
+
+cShader = ShaderProgram('cShader', [
+    VertexShader("""
+        varying vec3 normal;
+        varying vec4 pos;
+
+        void main() {
+            normal = normalize(gl_Normal);
+            gl_FrontColor = gl_Color;
+            gl_BackColor = gl_Color;
+            gl_Position = ftransform();
+            pos = gl_Vertex;
+        }
+    """),
+    FragmentShader("""
+        varying vec3 normal;
+        varying vec4 pos;
+
+        void main() {
+            vec3 blue = vec3(0.0, 0.4, 0.8);
+            vec3 orange = vec3(1.0, 0.2, 0.1);
+            float edgeInv = pow(normal.x, 2.0) + pow(normal.y, 2.0);
+            vec3 normPos = vec3(pos[0] / 4096.0, pos[1] / 6000.0, pos[2] / 2048.0);
+            vec3 color = max(normPos[1], 0) * orange - min(normPos[1], 0) * blue;
+            color = 0.25 * edgeInv * color;
+            gl_FragColor = vec4(color, 1.0);
+        }
+    """)
+])
 
 
 class Visualizer:
@@ -74,16 +111,19 @@ class Visualizer:
         self.text_item = gl.GLTextItem(pos=(0, 0, 60))
         self.text_item.setDepthValue(1)
 
-        # Add ground grid
+        # Add surface grids
+        grid_spacing = 512
+
+        # ground grids
         grid_item = gl.GLGridItem()
         grid_item.setSize(EXTENT_X * 2, EXTENT_Y * 2, 1)
-        grid_item.setSpacing(512, 512, 1)
+        grid_item.setSpacing(grid_spacing, grid_spacing, 1)
         self.w.addItem(grid_item)
 
         # ceiling grid
         grid_item = gl.GLGridItem()
         grid_item.setSize(EXTENT_X * 2, EXTENT_Y * 2, 1)
-        grid_item.setSpacing(512, 512, 1)
+        grid_item.setSpacing(grid_spacing, grid_spacing, 1)
         grid_item.translate(0, 0, EXTENT_Z)
         self.w.addItem(grid_item)
 
@@ -91,42 +131,19 @@ class Visualizer:
         for sign in (1, -1):
             grid_item = gl.GLGridItem()
             grid_item.setSize(EXTENT_Z, EXTENT_Y * 2, 1)
-            grid_item.setSpacing(512, 512, 1)
+            grid_item.setSpacing(grid_spacing, grid_spacing, 1)
             grid_item.rotate(90, 0, 1, 0)
             grid_item.translate(sign * EXTENT_X, 0, EXTENT_Z / 2)
             self.w.addItem(grid_item)
 
         # Create soccar_field
-        mi_kwargs = {"smooth": False, "drawFaces": False, "drawEdges": True,
-                     "shader": "normalColor"}
-
-        for sign_1 in (1, -1):
-            for sign_2 in (1, -1):
-                # corners
-                corner_md = gl.MeshData(vertexes=soccar_corner_vertices, faces=soccar_corner_ids)
-                corner_mi = gl.GLMeshItem(meshdata=corner_md, **mi_kwargs)
-                corner_mi.scale(sign_1, sign_2, 1)
-                self.w.addItem(corner_mi)
-
-            # goals
-            goal_md = gl.MeshData(vertexes=soccar_goal_vertices, faces=soccar_goal_ids)
-            goal_mi = gl.GLMeshItem(meshdata=goal_md, **mi_kwargs)
-            goal_mi.scale(1, sign_1, 1)
-            goal_mi.translate(0, -sign_1 * EXTENT_Y, 0)
-            self.w.addItem(goal_mi)
-
-            # sidewall ramps
-            ramps_0_md = gl.MeshData(vertexes=soccar_ramps_0_vertices, faces=soccar_ramps_0_ids)
-            ramps_0_mi = gl.GLMeshItem(meshdata=ramps_0_md, **mi_kwargs)
-            ramps_0_mi.scale(sign_1, 1, 1)
-            ramps_0_mi.translate(sign_1, 0, 0)
-            self.w.addItem(ramps_0_mi)
-
-            ramps_1_md = gl.MeshData(vertexes=soccar_ramps_1_vertices, faces=soccar_ramps_1_ids)
-            ramps_1_mi = gl.GLMeshItem(meshdata=ramps_1_md, **mi_kwargs)
-            ramps_1_mi.scale(sign_1, 1, 1)
-            ramps_1_mi.translate(sign_1, 0, 0)
-            self.w.addItem(ramps_1_mi)
+        mi_kwargs = {"smooth": False, "drawFaces": True, "drawEdges": True,
+                     "edgeColor": (0.125, 0.125, 0.125, 1),
+                     "shader": cShader,
+                     "glOptions": {GL_DEPTH_TEST: False, GL_BLEND: True,
+                                   'glBlendFunc': (GL_SRC_ALPHA, GL_ONE)}}
+        soccar_field_mi = gl.GLMeshItem(vertexes=soccar_field_v, faces=soccar_field_f, **mi_kwargs)
+        self.w.addItem(soccar_field_mi)
 
         # Create ball geometry
         ball_radius = self.arena.ball.get_radius()
@@ -144,10 +161,10 @@ class Visualizer:
         self.w.addItem(self.ball_proj)
 
         # Create boost geometry
-        big_pad_cyl_md = gl.MeshData.cylinder(rows=1, cols=16, length=PAD_CYL_HEIGHT,
-                                              radius=pad_CYL_RAD_BIG)
-        small_pad_cyl_md = gl.MeshData.cylinder(rows=1, cols=16, length=PAD_CYL_HEIGHT,
-                                                radius=PAD_CYL_RAD_SMALL)
+        # big_pad_cyl_md = gl.MeshData.cylinder(rows=1, cols=8, length=PAD_CYL_HEIGHT,
+        #                                       radius=pad_CYL_RAD_BIG)
+        # small_pad_cyl_md = gl.MeshData.cylinder(rows=1, cols=8, length=PAD_CYL_HEIGHT,
+        #                                         radius=PAD_CYL_RAD_SMALL)
 
         self.pads_mi = []
         for pad in arena.get_boost_pads():
@@ -157,17 +174,16 @@ class Visualizer:
             pad_box_verts = box_verts * [1, 1, 0.5] + [0, 0, 0.25]  # trimming the bottom half
             pad_box_verts *= (pad_sq_dims_big if pad.is_big else pad_sq_dims_small)
             pad_box_mi = gl.GLMeshItem(vertexes=pad_box_verts, faces=box_faces,
-                                       drawFaces=False, drawEdges=True,
-                                       edgeColor=self.white_color)
+                                       drawFaces=False, drawEdges=True)
             pad_box_mi.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
             self.pads_mi.append(pad_box_mi)
             self.w.addItem(pad_box_mi)
 
-            # pad cylinder
-            pad_cyl_md = big_pad_cyl_md if pad.is_big else small_pad_cyl_md
-            pad_cyl_mi = gl.GLMeshItem(meshdata=pad_cyl_md, drawFaces=False, drawEdges=True)
-            pad_cyl_mi.rotate(45, 0, 0, 1)
-            pad_cyl_mi.setParentItem(pad_box_mi)
+            # # pad cylinder (slows down rendering)
+            # pad_cyl_md = big_pad_cyl_md if pad.is_big else small_pad_cyl_md
+            # pad_cyl_mi = gl.GLMeshItem(meshdata=pad_cyl_md, drawFaces=False, drawEdges=True)
+            # pad_cyl_mi.rotate(45, 0, 0, 1)
+            # pad_cyl_mi.setParentItem(pad_box_mi)
 
         # Create car geometry
         self.cars_mi = []
@@ -214,6 +230,7 @@ class Visualizer:
                     wheel_mi.rotate(90, 1, 0, 0, local=True)
                     wheel_mi.setParentItem(car_mi)
 
+        self.tick_time = time.perf_counter()
         self.update()
 
     def get_cam_targets(self):
@@ -332,6 +349,8 @@ class Visualizer:
             self.text_item.text = f"{car_state.boost=:.1f}"
             self.text_item.setParentItem(self.cars_mi[car_index])
 
+        self.last_time = time.perf_counter()
+
     def update_plot_data(self):
         self.update_boost_pad_data()
         self.update_ball_data()
@@ -354,8 +373,16 @@ class Visualizer:
 
         self.update_plot_data()
 
+    def tick(self):
+        while (delta_t := 1 / 60 - (time.perf_counter() - self.tick_time)) > 1e-6:
+            if delta_t > 1e-3:
+                time.sleep(delta_t - 1e-3)
+
+        self.tick_time = time.perf_counter()
+        self.update()
+
     def animation(self):
         timer = QtCore.QTimer()
-        timer.timeout.connect(self.update)
-        timer.start(16)
+        timer.timeout.connect(self.tick)
+        timer.start()
         self.app.exec()
