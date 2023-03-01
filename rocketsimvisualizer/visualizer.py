@@ -70,43 +70,63 @@ class Visualizer:
         self.w.opts["distance"] = self.cam_dict["DISTANCE"]
         self.w.show()
 
-        # Add ground grid
-        grid_item = gl.GLGridItem()
-        grid_item.setSize(8192, 10240, 1)
-        grid_item.setSpacing(1024, 1024, 1)
-        self.w.addItem(grid_item)
-
-        # ceiling grid
-        grid_item = gl.GLGridItem()
-        grid_item.setSize(8192, 10240, 1)
-        grid_item.setSpacing(1024, 1024, 1)
-        grid_item.translate(0, 0, 2048)
-        self.w.addItem(grid_item)
-
-        # side wall grids
-        grid_item = gl.GLGridItem()
-        grid_item.setSize(2048, 10240, 1)
-        grid_item.setSpacing(1024, 1024, 1)
-        grid_item.rotate(90, 0, 1, 0)
-        grid_item.translate(8192 / 2, 0, 2048 / 2)
-        self.w.addItem(grid_item)
-
-        grid_item = gl.GLGridItem()
-        grid_item.setSize(2048, 10240, 1)
-        grid_item.setSpacing(1024, 1024, 1)
-        grid_item.rotate(90, 0, 1, 0)
-        grid_item.translate(-8192 / 2, 0, 2048 / 2)
-        self.w.addItem(grid_item)
-
         # text info
         self.text_item = gl.GLTextItem(pos=(0, 0, 60))
         self.text_item.setDepthValue(1)
 
-        # Create stadium 3d model
-        stadium_mi = gl.GLMeshItem(vertexes=soccar_field_v, faces=soccar_field_f,
-                                   smooth=False, drawFaces=False, drawEdges=True,
-                                   computeNormals=False)
-        self.w.addItem(stadium_mi)
+        # Add ground grid
+        grid_item = gl.GLGridItem()
+        grid_item.setSize(EXTENT_X * 2, EXTENT_Y * 2, 1)
+        grid_item.setSpacing(512, 512, 1)
+        self.w.addItem(grid_item)
+
+        # ceiling grid
+        grid_item = gl.GLGridItem()
+        grid_item.setSize(EXTENT_X * 2, EXTENT_Y * 2, 1)
+        grid_item.setSpacing(512, 512, 1)
+        grid_item.translate(0, 0, EXTENT_Z)
+        self.w.addItem(grid_item)
+
+        # side wall grids
+        for sign in (1, -1):
+            grid_item = gl.GLGridItem()
+            grid_item.setSize(EXTENT_Z, EXTENT_Y * 2, 1)
+            grid_item.setSpacing(512, 512, 1)
+            grid_item.rotate(90, 0, 1, 0)
+            grid_item.translate(sign * EXTENT_X, 0, EXTENT_Z / 2)
+            self.w.addItem(grid_item)
+
+        # Create soccar_field
+        mi_kwargs = {"smooth": False, "drawFaces": False, "drawEdges": True,
+                     "shader": "normalColor"}
+
+        for sign_1 in (1, -1):
+            for sign_2 in (1, -1):
+                # corners
+                corner_md = gl.MeshData(vertexes=soccar_corner_vertices, faces=soccar_corner_ids)
+                corner_mi = gl.GLMeshItem(meshdata=corner_md, **mi_kwargs)
+                corner_mi.scale(sign_1, sign_2, 1)
+                self.w.addItem(corner_mi)
+
+            # goals
+            goal_md = gl.MeshData(vertexes=soccar_goal_vertices, faces=soccar_goal_ids)
+            goal_mi = gl.GLMeshItem(meshdata=goal_md, **mi_kwargs)
+            goal_mi.scale(1, sign_1, 1)
+            goal_mi.translate(0, -sign_1 * EXTENT_Y, 0)
+            self.w.addItem(goal_mi)
+
+            # sidewall ramps
+            ramps_0_md = gl.MeshData(vertexes=soccar_ramps_0_vertices, faces=soccar_ramps_0_ids)
+            ramps_0_mi = gl.GLMeshItem(meshdata=ramps_0_md, **mi_kwargs)
+            ramps_0_mi.scale(sign_1, 1, 1)
+            ramps_0_mi.translate(sign_1, 0, 0)
+            self.w.addItem(ramps_0_mi)
+
+            ramps_1_md = gl.MeshData(vertexes=soccar_ramps_1_vertices, faces=soccar_ramps_1_ids)
+            ramps_1_mi = gl.GLMeshItem(meshdata=ramps_1_md, **mi_kwargs)
+            ramps_1_mi.scale(sign_1, 1, 1)
+            ramps_1_mi.translate(sign_1, 0, 0)
+            self.w.addItem(ramps_1_mi)
 
         # Create ball geometry
         ball_radius = self.arena.ball.get_radius()

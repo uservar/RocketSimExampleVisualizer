@@ -1,5 +1,9 @@
 import numpy as np
 
+# standard soccar field
+EXTENT_X = 4096
+EXTENT_Y = 5120
+EXTENT_Z = 2048
 
 # boost pad cylinder
 PAD_CYL_HEIGHT = 95
