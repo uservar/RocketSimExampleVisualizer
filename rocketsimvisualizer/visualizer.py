@@ -1,6 +1,6 @@
-from rocketsimvisualizer.models import obj
 from rocketsimvisualizer import KeyboardController, GenericController
 from rocketsimvisualizer.constants import *
+from rocketsimvisualizer.soccar_field import *
 
 from pyqtgraph.Qt import QtCore
 import pyqtgraph as pg
@@ -59,6 +59,9 @@ class Visualizer:
         self.car_index = 0  # index of the car we control/spectate
         self.target_index = -1  # item to track with target cam
 
+        self.white_color = (1, 1, 1, 1)
+        self.black_color = (0, 0, 0, 1)
+
         self.blue_color = np.array([0, 0.4, 0.8, 1])
         self.orange_color = np.array([1, 0.2, 0.1, 1])
 
@@ -69,23 +72,40 @@ class Visualizer:
 
         # Add ground grid
         grid_item = gl.GLGridItem()
-        grid_item.setSize(8192, 10240 + 880 * 2, 1)
-        grid_item.setSpacing(100, 100, 1)
+        grid_item.setSize(8192, 10240, 1)
+        grid_item.setSpacing(1024, 1024, 1)
+        self.w.addItem(grid_item)
+
+        # ceiling grid
+        grid_item = gl.GLGridItem()
+        grid_item.setSize(8192, 10240, 1)
+        grid_item.setSpacing(1024, 1024, 1)
+        grid_item.translate(0, 0, 2048)
+        self.w.addItem(grid_item)
+
+        # side wall grids
+        grid_item = gl.GLGridItem()
+        grid_item.setSize(2048, 10240, 1)
+        grid_item.setSpacing(1024, 1024, 1)
+        grid_item.rotate(90, 0, 1, 0)
+        grid_item.translate(8192 / 2, 0, 2048 / 2)
+        self.w.addItem(grid_item)
+
+        grid_item = gl.GLGridItem()
+        grid_item.setSize(2048, 10240, 1)
+        grid_item.setSpacing(1024, 1024, 1)
+        grid_item.rotate(90, 0, 1, 0)
+        grid_item.translate(-8192 / 2, 0, 2048 / 2)
         self.w.addItem(grid_item)
 
         # text info
         self.text_item = gl.GLTextItem(pos=(0, 0, 60))
         self.text_item.setDepthValue(1)
 
-        self.default_edge_color = (1, 1, 1, 1)
-        self.black_color = (0, 0, 0, 1)
-
         # Create stadium 3d model
-        stadium_object = obj.OBJ(current_dir / "models/field_simplified.obj")
-        stadium_mi = gl.GLMeshItem(vertexes=stadium_object.vertices, faces=stadium_object.faces,
+        stadium_mi = gl.GLMeshItem(vertexes=soccar_field_v, faces=soccar_field_f,
                                    smooth=False, drawFaces=False, drawEdges=True,
-                                   color=self.black_color, edgeColor=self.default_edge_color)
-        stadium_mi.rotate(90, 0, 0, 1)
+                                   computeNormals=False)
         self.w.addItem(stadium_mi)
 
         # Create ball geometry
@@ -94,13 +114,13 @@ class Visualizer:
         self.ball_mi = gl.GLMeshItem(meshdata=ball_md, smooth=False,
                                      drawFaces=True, drawEdges=True,
                                      color=(0.1, 0.1, 0.1, 1),
-                                     edgeColor=self.default_edge_color)
+                                     edgeColor=self.white_color)
         self.w.addItem(self.ball_mi)
 
         # Create ground projection for the ball
         ball_proj_md = gl.MeshData.cylinder(rows=1, cols=16, length=0, radius=round(ball_radius))
         self.ball_proj = gl.GLMeshItem(meshdata=ball_proj_md, smooth=False, drawFaces=False,
-                                       drawEdges=True, edgeColor=self.default_edge_color)
+                                       drawEdges=True, edgeColor=self.white_color)
         self.w.addItem(self.ball_proj)
 
         # Create boost geometry
@@ -118,15 +138,14 @@ class Visualizer:
             pad_box_verts *= (pad_sq_dims_big if pad.is_big else pad_sq_dims_small)
             pad_box_mi = gl.GLMeshItem(vertexes=pad_box_verts, faces=box_faces,
                                        drawFaces=False, drawEdges=True,
-                                       edgeColor=self.default_edge_color)
+                                       edgeColor=self.white_color)
             pad_box_mi.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
             self.pads_mi.append(pad_box_mi)
             self.w.addItem(pad_box_mi)
 
             # pad cylinder
             pad_cyl_md = big_pad_cyl_md if pad.is_big else small_pad_cyl_md
-            pad_cyl_mi = gl.GLMeshItem(meshdata=pad_cyl_md, drawFaces=False, drawEdges=True,
-                                       edgeColor=self.default_edge_color)
+            pad_cyl_mi = gl.GLMeshItem(meshdata=pad_cyl_md, drawFaces=False, drawEdges=True)
             pad_cyl_mi.rotate(45, 0, 0, 1)
             pad_cyl_mi.setParentItem(pad_box_mi)
 
@@ -147,7 +166,7 @@ class Visualizer:
             car_mi = gl.GLMeshItem(vertexes=hitbox_verts, faces=box_faces,
                                    smooth=False, drawFaces=True, drawEdges=True,
                                    faceColors=hitbox_colors,
-                                   edgeColor=self.default_edge_color)
+                                   edgeColor=self.white_color)
 
             self.w.addItem(car_mi)
             self.cars_mi.append(car_mi)
@@ -166,11 +185,11 @@ class Visualizer:
                     wheel_radius = wheel_pair.wheel_radius
                     wheel_pos = -np.array(wheel_pair.connection_point_offset.as_tuple())
                     wheel_pos[1] *= sign
-
+                    wheel_pos[2] += wheel_radius + 4  # guesstimate of compressed suspension
                     wheel_md = gl.MeshData.cylinder(rows=1, cols=8, length=0,
                                                     radius=round(wheel_radius))
                     wheel_mi = gl.GLMeshItem(meshdata=wheel_md, drawFaces=False, drawEdges=True,
-                                             smooth=False, edgeColor=self.default_edge_color)
+                                             smooth=False, edgeColor=self.white_color)
                     wheel_mi.translate(*wheel_pos)
                     wheel_mi.rotate(90, 1, 0, 0, local=True)
                     wheel_mi.setParentItem(car_mi)
@@ -245,7 +264,7 @@ class Visualizer:
             self.cars_mi[i].rotate(car_angles.roll / math.pi * 180, 1, 0, 0, local=True)
 
             # visual indicator for going supersonic
-            self.cars_mi[i].opts["edgeColor"] = (0, 0, 0, 1) if car_state.is_supersonic else self.default_edge_color
+            self.cars_mi[i].opts["edgeColor"] = self.black_color if car_state.is_supersonic else self.white_color
 
     def update_camera_data(self):
 
