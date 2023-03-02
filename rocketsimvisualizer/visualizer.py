@@ -142,6 +142,7 @@ class Visualizer:
                      "shader": cShader,
                      "glOptions": {GL_DEPTH_TEST: False, GL_BLEND: True,
                                    'glBlendFunc': (GL_SRC_ALPHA, GL_ONE)}}
+
         soccar_field_mi = gl.GLMeshItem(vertexes=soccar_field_v, faces=soccar_field_f, **mi_kwargs)
         self.w.addItem(soccar_field_mi)
 
@@ -297,8 +298,8 @@ class Visualizer:
 
             # rotation
             self.cars_mi[i].rotate(car_angles.yaw / math.pi * 180, 0, 0, -1, local=True)
-            self.cars_mi[i].rotate(car_angles.pitch / math.pi * 180, 0, -1, 0, local=True)
-            self.cars_mi[i].rotate(car_angles.roll / math.pi * 180, 1, 0, 0, local=True)
+            self.cars_mi[i].rotate(car_angles.pitch / math.pi * 180, 0, 1, 0, local=True)
+            self.cars_mi[i].rotate(car_angles.roll / math.pi * 180, -1, 0, 0, local=True)
 
             # visual indicator for going supersonic
             self.cars_mi[i].opts["edgeColor"] = self.black_color if car_state.is_supersonic else self.white_color
