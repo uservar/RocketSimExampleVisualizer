@@ -48,10 +48,10 @@ cShader = ShaderProgram('cShader', [
         void main() {
             vec3 blue = vec3(0.0, 0.4, 0.8);
             vec3 orange = vec3(1.0, 0.2, 0.1);
-            float edgeInv = pow(normal.x, 2.0) + pow(normal.y, 2.0);
+            float xyNorm_2 = pow(normal.x, 2.0) + pow(normal.y, 2.0);
             vec3 normPos = vec3(pos[0] / 4096.0, pos[1] / 6000.0, pos[2] / 2048.0);
-            vec3 color = max(normPos[1], 0) * orange - min(normPos[1], 0) * blue;
-            color = 0.25 * edgeInv * color;
+            vec3 color = max(normPos.y, 0.0) * orange - min(normPos.y, 0.0) * blue;
+            color = 0.25 * xyNorm_2 * color;
             gl_FragColor = vec4(color, 1.0);
         }
     """)
