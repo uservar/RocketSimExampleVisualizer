@@ -306,6 +306,9 @@ class Visualizer:
 
     def update_camera_data(self):
 
+        if self.controller.free_cam:
+            return
+
         # calculate target cam values
         if self.controller.target_cam:
             cam_pos = self.w.cameraPosition()
@@ -325,7 +328,6 @@ class Visualizer:
                                    elevation=self.cam_dict["ANGLE"] - smaller_target_elevation / math.pi * 180)
 
         if self.cars_mi:
-
             car_index = self.car_index % len(self.cars_mi)
             car = self.arena.get_cars()[car_index]
             car_state = car.get_state()

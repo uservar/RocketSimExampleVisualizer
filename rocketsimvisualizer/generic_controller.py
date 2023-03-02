@@ -8,6 +8,7 @@ class GenericController:
         self.is_pressed_dict = {input_key: False for input_key in self.input_dict.values()}
         self.controls = RocketSim.CarControls()
         self.target_cam = False
+        self.free_cam = False
 
     def reset_controls(self):
         for key in self.is_pressed_dict.keys():

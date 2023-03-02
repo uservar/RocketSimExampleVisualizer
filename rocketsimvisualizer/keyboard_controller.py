@@ -37,6 +37,9 @@ class KeyboardController(GenericController):
         if self.input_dict.get(key, None) == "TARGET_CAM" and is_pressed:
             self.target_cam = not self.target_cam
 
+        if self.input_dict.get(key, None) == "FREE_CAM" and is_pressed:
+            self.free_cam = not self.free_cam
+
         if self.input_dict.get(key, None) == "SWITCH_CAR" and is_pressed:
             self.switch_car()
 

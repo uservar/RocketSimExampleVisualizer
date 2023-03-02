@@ -11,6 +11,7 @@ K = "BOOST"
 Space = "TARGET_CAM"
 Tab = "CYCLE_TARGETS"
 Enter = "SWITCH_CAR"
+Escape = "FREE_CAM"
 
 [CAMERA]
 FOV = 110

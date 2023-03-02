@@ -13,6 +13,7 @@ class CompositeController(GenericController):
 
     def get_controls(self):
         self.target_cam = self.kc.target_cam or self.xc.target_cam
+        self.free_cam = self.kc.free_cam or self.xc.free_cam
 
         self.controls.throttle = self.kc.controls.throttle + self.xc.controls.throttle
         self.controls.steer = self.kc.controls.steer + self.xc.controls.steer
