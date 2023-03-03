@@ -1,6 +1,6 @@
-from rocketsimvisualizer import KeyboardController, GenericController
+from rocketsimvisualizer import KeyboardController, GenericController, GL2DTextItem
+from rocketsimvisualizer.soccar_field import soccar_field_v, soccar_field_f
 from rocketsimvisualizer.constants import *
-from rocketsimvisualizer.soccar_field import *
 
 from pyqtgraph.Qt import QtCore, QtGui
 from pyqtgraph.opengl.shaders import ShaderProgram, VertexShader, FragmentShader
@@ -12,6 +12,7 @@ import pyqtgraph.opengl as gl
 import RocketSim
 
 import numpy as np
+import numbers
 import math
 import time
 
@@ -108,8 +109,9 @@ class Visualizer:
         self.w.show()
 
         # text info
-        self.text_item = gl.GLTextItem(pos=(0, 0, 60))
-        self.text_item.setDepthValue(1)
+        self.text_item = GL2DTextItem()
+        self.text_item.setDepthValue(2)
+        self.w.addItem(self.text_item)
 
         # Add surface grids
         grid_spacing = 512
@@ -349,10 +351,15 @@ class Visualizer:
             car_index = self.car_index % len(self.cars_mi)
             car = self.arena.get_cars()[car_index]
             car_state = car.get_state()
-            self.text_item.text = f"{car_state.boost=:.1f}"
-            self.text_item.setParentItem(self.cars_mi[car_index])
-
-        self.last_time = time.perf_counter()
+            text = ""
+            for key in dir(car_state):
+                if not key.startswith("_"):
+                    value = getattr(car_state, key)
+                    if isinstance(value, (float, RocketSim.Vec, RocketSim.Angle)):
+                        text += f"{key} = {value:.1f}\n"
+                    else:
+                        text += f"{key} = {value}\n"
+            self.text_item.text = text
 
     def update_plot_data(self):
         self.update_boost_pad_data()
