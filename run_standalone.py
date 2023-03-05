@@ -1,8 +1,7 @@
-import RocketSim
-
 from rocketsimvisualizer import Visualizer, CompositeController
-
+import RocketSim
 import tomli
+
 
 with open("rsvconfig.toml", "rb") as file:
     config_dict = tomli.load(file)

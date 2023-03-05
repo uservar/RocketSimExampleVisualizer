@@ -234,6 +234,7 @@ class Visualizer:
                     wheel_mi.setParentItem(car_mi)
 
         self.tick_time = time.perf_counter()
+        self.fps_t0 = time.perf_counter()
         self.update()
 
     def get_cam_targets(self):
@@ -347,11 +348,17 @@ class Visualizer:
                                            elevation=self.cam_dict["ANGLE"])
 
     def update_text_data(self):
+        text = ""
+
+        # fps
+        fps = 1 / (time.perf_counter() - self.fps_t0)
+        text += f"{fps = :.0f}\n"
+
+        # car info
         if self.cars_mi:
             car_index = self.car_index % len(self.cars_mi)
             car = self.arena.get_cars()[car_index]
             car_state = car.get_state()
-            text = ""
             for key in dir(car_state):
                 if not key.startswith("_"):
                     value = getattr(car_state, key)
@@ -359,7 +366,9 @@ class Visualizer:
                         text += f"{key} = {value:.1f}\n"
                     else:
                         text += f"{key} = {value}\n"
-            self.text_item.text = text
+
+        self.text_item.text = text
+        self.fps_t0 = time.perf_counter()
 
     def update_plot_data(self):
         self.update_boost_pad_data()
@@ -384,10 +393,8 @@ class Visualizer:
         self.update_plot_data()
 
     def tick(self):
-        while (delta_t := 1 / 60 - (time.perf_counter() - self.tick_time)) > 1e-6:
-            if delta_t > 1e-3:
-                time.sleep(delta_t - 1e-3)
-
+        while (1 / 60 - (time.perf_counter() - self.tick_time)) > 1e-6:
+            pass
         self.tick_time = time.perf_counter()
         self.update()
 
