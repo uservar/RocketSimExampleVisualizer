@@ -12,7 +12,6 @@ import pyqtgraph.opengl as gl
 import RocketSim
 
 import numpy as np
-import numbers
 import math
 import time
 
@@ -142,7 +141,7 @@ class Visualizer:
         mi_kwargs = {"smooth": False, "drawFaces": True, "drawEdges": True,
                      "edgeColor": (0.125, 0.125, 0.125, 1),
                      "shader": cShader,
-                     "glOptions": {GL_DEPTH_TEST: False, GL_BLEND: True,
+                     "glOptions": {GL_DEPTH_TEST: False, GL_BLEND: True, GL_CULL_FACE: True,
                                    'glBlendFunc': (GL_SRC_ALPHA, GL_ONE)}}
 
         soccar_field_mi = gl.GLMeshItem(vertexes=soccar_field_v, faces=soccar_field_f, **mi_kwargs)
@@ -375,7 +374,7 @@ class Visualizer:
         self.update_ball_data()
         self.update_cars_data()
         self.update_camera_data()
-        self.update_text_data()
+        # self.update_text_data()
 
     def update(self):
         # only set car controls if overwrite_controls is true and there's at least one car
