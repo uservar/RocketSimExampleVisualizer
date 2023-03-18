@@ -9,7 +9,7 @@ from OpenGL.GL import *
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
-import RocketSim
+import pyrocketsim as RS
 
 import numpy as np
 import math
@@ -191,12 +191,12 @@ class Visualizer:
         self.cars_mi = []
         for car in arena.get_cars():
 
-            car_color = self.blue_color if car.team == 0 else self.orange_color
+            car_color = self.blue_color if car.team == RS.BLUE else self.orange_color
 
             # car hitbox as mesh
             car_config = car.get_config()
-            hitbox_size = np.array(car_config.hitbox_size.as_tuple())
-            hitbox_offset = np.array(car_config.hitbox_pos_offset.as_tuple())
+            hitbox_size = car_config.hitbox_size.as_numpy()
+            hitbox_offset = car_config.hitbox_pos_offset.as_numpy()
 
             hitbox_verts = box_verts * hitbox_size + hitbox_offset * [-1, 1, 1]
             hitbox_colors = box_colors * car_color
@@ -221,7 +221,7 @@ class Visualizer:
             for wheel_pair in (car_config.front_wheels, car_config.back_wheels):
                 for sign in (1, -1):
                     wheel_radius = wheel_pair.wheel_radius
-                    wheel_pos = -np.array(wheel_pair.connection_point_offset.as_tuple())
+                    wheel_pos = -wheel_pair.connection_point_offset.as_numpy()
                     wheel_pos[1] *= sign
                     wheel_pos[2] += wheel_radius + 4  # guesstimate of compressed suspension
                     wheel_md = gl.MeshData.cylinder(rows=1, cols=8, length=0,
@@ -254,7 +254,7 @@ class Visualizer:
     def switch_car(self):
         if self.overwrite_controls:
             # reset car controls before switching cars
-            self.arena.get_cars()[self.car_index].set_controls(RocketSim.CarControls())
+            self.arena.get_cars()[self.car_index].set_controls(RS.CarControls())
         self.car_index = (self.car_index + 1) % len(self.cars_mi)
 
     def update_boost_pad_data(self):
@@ -361,8 +361,10 @@ class Visualizer:
             for key in dir(car_state):
                 if not key.startswith("_"):
                     value = getattr(car_state, key)
-                    if isinstance(value, (float, RocketSim.Vec, RocketSim.Angle)):
-                        text += f"{key} = {value:.1f}\n"
+                    if isinstance(value, (float, RS.Vec, RS.Angle,
+                                          RS.RotMat, RS.WorldContact,
+                                          RS.CarContact, RS.CarControls)):
+                        text += f"{key} = {value:.2f}\n"
                     else:
                         text += f"{key} = {value}\n"
 
@@ -374,7 +376,7 @@ class Visualizer:
         self.update_ball_data()
         self.update_cars_data()
         self.update_camera_data()
-        # self.update_text_data()
+        self.update_text_data()
 
     def update(self):
         # only set car controls if overwrite_controls is true and there's at least one car
