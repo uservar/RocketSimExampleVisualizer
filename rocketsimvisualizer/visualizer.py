@@ -96,8 +96,8 @@ class Visualizer:
         self.car_index = 0  # index of the car we control/spectate
         self.target_index = -1  # item to track with target cam
 
-        self.white_color = (1, 1, 1, 1)
-        self.black_color = (0, 0, 0, 1)
+        self.white_color = np.array((1, 1, 1, 1))
+        self.black_color = np.array((0, 0, 0, 1))
 
         self.blue_color = np.array([0, 0.4, 0.8, 1])
         self.orange_color = np.array([1, 0.2, 0.1, 1])
@@ -175,8 +175,10 @@ class Visualizer:
             # pad hitbox
             pad_box_verts = box_verts * [1, 1, 0.5] + [0, 0, 0.25]  # trimming the bottom half
             pad_box_verts *= (pad_sq_dims_big if pad.is_big else pad_sq_dims_small)
+            pad_box_edge_color = self.white_color if pad.is_big else self.white_color / 2
             pad_box_mi = gl.GLMeshItem(vertexes=pad_box_verts, faces=box_faces,
-                                       drawFaces=False, drawEdges=True)
+                                       drawFaces=False, drawEdges=True,
+                                       edgeColor=pad_box_edge_color)
             pad_box_mi.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
             self.pads_mi.append(pad_box_mi)
             self.w.addItem(pad_box_mi)
