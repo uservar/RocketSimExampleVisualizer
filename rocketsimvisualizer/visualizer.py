@@ -95,6 +95,9 @@ class Visualizer:
 
         self.car_index = 0  # index of the car we control/spectate
         self.target_index = -1  # item to track with target cam
+        self.manual_swivel = False  # wether or not to allow manual camera swivel
+        self.w.mousePressEvent = self.mousePressEvent
+        self.w.mouseReleaseEvent = self.mouseReleaseEvent
 
         self.white_color = np.array((1, 1, 1, 1))
         self.black_color = np.array((0, 0, 0, 1))
@@ -259,6 +262,14 @@ class Visualizer:
             self.arena.get_cars()[self.car_index].set_controls(RS.CarControls())
         self.car_index = (self.car_index + 1) % len(self.cars_mi)
 
+    def mousePressEvent(self, ev):
+        lpos = ev.position() if hasattr(ev, 'position') else ev.localPos()
+        self.w.mousePos = lpos
+        self.manual_swivel = True
+
+    def mouseReleaseEvent(self, ev):
+        self.manual_swivel = False
+
     def update_boost_pad_data(self):
         for i, pad in enumerate(self.arena.get_boost_pads()):
             pad_state = pad.get_state()
@@ -314,7 +325,7 @@ class Visualizer:
             return
 
         # calculate target cam values
-        if self.controller.target_cam:
+        if self.controller.target_cam and not self.manual_swivel:
             cam_pos = self.w.cameraPosition()
             target_pos = self.get_cam_target().transform().matrix()[:3, 3]
             rel_target_pos = (target_pos - cam_pos) * [-1, 1, 1]
@@ -340,7 +351,7 @@ class Visualizer:
             self.w.opts["center"] = pg.Vector(-car_state.pos.x, car_state.pos.y,
                                               car_state.pos.z + self.cam_dict["HEIGHT"])
 
-            if not self.controller.target_cam:
+            if not self.controller.target_cam and not self.manual_swivel:
                 # non-target_cam cam
                 car_vel_2d_norm = math.sqrt(car_state.vel.y ** 2 + car_state.vel.x ** 2)
                 if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
