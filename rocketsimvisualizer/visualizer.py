@@ -12,8 +12,10 @@ import pyqtgraph.opengl as gl
 import pyrocketsim as RS
 
 import numpy as np
-import math
+
+import threading
 import time
+import math
 
 import pathlib
 import tomli
@@ -165,32 +167,18 @@ class Visualizer:
                                        drawEdges=True, edgeColor=self.white_color)
         self.w.addItem(self.ball_proj)
 
-        # Create boost geometry
-        # big_pad_cyl_md = gl.MeshData.cylinder(rows=1, cols=8, length=PAD_CYL_HEIGHT,
-        #                                       radius=pad_CYL_RAD_BIG)
-        # small_pad_cyl_md = gl.MeshData.cylinder(rows=1, cols=8, length=PAD_CYL_HEIGHT,
-        #                                         radius=PAD_CYL_RAD_SMALL)
-
         self.pads_mi = []
         for pad in arena.get_boost_pads():
-            pad_pos = pad.get_pos()
-
             # pad hitbox
-            pad_box_verts = box_verts * [1, 1, 0.5] + [0, 0, 0.25]  # trimming the bottom half
-            pad_box_verts *= (pad_sq_dims_big if pad.is_big else pad_sq_dims_small)
+            pad_sq_dims = pad_sq_dims_big if pad.is_big else pad_sq_dims_small
+            pad_box_verts = box_verts * pad_sq_dims
             pad_box_edge_color = self.white_color if pad.is_big else self.white_color / 2
             pad_box_mi = gl.GLMeshItem(vertexes=pad_box_verts, faces=box_faces,
                                        drawFaces=False, drawEdges=True,
                                        edgeColor=pad_box_edge_color)
-            pad_box_mi.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
+            pad_box_mi.translate(-pad.pos.x, pad.pos.y, pad.pos.z)
             self.pads_mi.append(pad_box_mi)
             self.w.addItem(pad_box_mi)
-
-            # # pad cylinder (slows down rendering)
-            # pad_cyl_md = big_pad_cyl_md if pad.is_big else small_pad_cyl_md
-            # pad_cyl_mi = gl.GLMeshItem(meshdata=pad_cyl_md, drawFaces=False, drawEdges=True)
-            # pad_cyl_mi.rotate(45, 0, 0, 1)
-            # pad_cyl_mi.setParentItem(pad_box_mi)
 
         # Create car geometry
         self.cars_mi = []
@@ -417,3 +405,15 @@ class Visualizer:
         timer.timeout.connect(self.tick)
         timer.start()
         self.app.exec()
+
+
+class VisualizerThread(threading.Thread):
+
+    def __init__(self, *args, **kwargs):
+        super(VisualizerThread, self).__init__()
+        self.args = args
+        self.kwargs = kwargs
+
+    def run(self):
+        visualizer = Visualizer(*self.args, **self.kwargs)
+        visualizer.animation()
