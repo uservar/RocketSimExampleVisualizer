@@ -9,7 +9,7 @@ from OpenGL.GL import *
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
-import pyrocketsim as RS
+import pyrocketsim as rs
 
 import numpy as np
 
@@ -185,7 +185,7 @@ class Visualizer:
         self.cars_mi = []
         for car in arena.get_cars():
 
-            car_color = self.blue_color if car.team == RS.BLUE else self.orange_color
+            car_color = self.blue_color if car.team == rs.BLUE else self.orange_color
 
             # car hitbox as mesh
             car_config = car.get_config()
@@ -248,7 +248,7 @@ class Visualizer:
     def switch_car(self):
         if self.overwrite_controls:
             # reset car controls before switching cars
-            self.arena.get_cars()[self.car_index].set_controls(RS.CarControls())
+            self.arena.get_cars()[self.car_index].set_controls(rs.CarControls())
         self.car_index = (self.car_index + 1) % len(self.cars_mi)
 
     def mousePressEvent(self, ev):
@@ -363,9 +363,9 @@ class Visualizer:
             for key in dir(car_state):
                 if not key.startswith("_"):
                     value = getattr(car_state, key)
-                    if isinstance(value, (float, RS.Vec, RS.Angle,
-                                          RS.RotMat, RS.WorldContact,
-                                          RS.CarContact, RS.CarControls)):
+                    if isinstance(value, (float, rs.Vec, rs.Angle,
+                                          rs.RotMat, rs.WorldContact,
+                                          rs.CarContact, rs.CarControls)):
                         text += f"{key} = {value:.2f}\n"
                     else:
                         text += f"{key} = {value}\n"

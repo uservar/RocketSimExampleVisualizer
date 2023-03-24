@@ -4,3 +4,5 @@ venv/
 target/
 assets/
 collision_meshes/
+*.pyd
+*.so
