@@ -61,7 +61,7 @@ cShader = ShaderProgram('cShader', [
 
 
 class Visualizer:
-    def __init__(self, arena,
+    def __init__(self, arena, fps=60,
                  tick_rate=120, tick_skip=2,
                  step_arena=False, overwrite_controls=False,
                  config_dict=None, controller_class=None):
@@ -73,6 +73,7 @@ class Visualizer:
         self.w.show()
 
         self.arena = arena
+        self.fps = fps
         self.tick_rate = tick_rate
         self.tick_skip = tick_skip
         self.step_arena = step_arena
@@ -395,7 +396,7 @@ class Visualizer:
         self.update_plot_data()
 
     def tick(self):
-        while (1 / 60 - (time.perf_counter() - self.tick_time)) > 1e-6:
+        while (1 / self.fps - (time.perf_counter() - self.tick_time)) > 1e-6:
             pass
         self.tick_time = time.perf_counter()
         self.update()
