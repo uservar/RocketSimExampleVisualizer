@@ -6,3 +6,4 @@ assets/
 collision_meshes/
 *.pyd
 *.so
+rsvconfig.toml
