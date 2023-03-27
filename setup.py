@@ -22,4 +22,6 @@ setup(
     ],
     python_requires=">=3.8",
     install_requires=requirements,
+    package_data={'': ['rsvconfig-default.toml']},
+    include_package_data=True
 )
