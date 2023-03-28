@@ -121,37 +121,39 @@ class Visualizer:
         # Add surface grids
         grid_spacing = 512
 
-        # ground grids
-        grid_item = gl.GLGridItem()
-        grid_item.setSize(EXTENT_X * 2, EXTENT_Y * 2, 1)
-        grid_item.setSpacing(grid_spacing, grid_spacing, 1)
-        self.w.addItem(grid_item)
-
-        # ceiling grid
-        grid_item = gl.GLGridItem()
-        grid_item.setSize(EXTENT_X * 2, EXTENT_Y * 2, 1)
-        grid_item.setSpacing(grid_spacing, grid_spacing, 1)
-        grid_item.translate(0, 0, EXTENT_Z)
-        self.w.addItem(grid_item)
-
-        # side wall grids
-        for sign in (1, -1):
+        if self.arena.game_mode == rs.SOCCAR:
+            # ground grids
             grid_item = gl.GLGridItem()
-            grid_item.setSize(EXTENT_Z, EXTENT_Y * 2, 1)
+            grid_item.setSize(SOCCAR_EXTENT_X * 2, SOCCAR_EXTENT_Y * 2, 1)
             grid_item.setSpacing(grid_spacing, grid_spacing, 1)
-            grid_item.rotate(90, 0, 1, 0)
-            grid_item.translate(sign * EXTENT_X, 0, EXTENT_Z / 2)
             self.w.addItem(grid_item)
 
-        # Create soccar_field
-        mi_kwargs = {"smooth": False, "drawFaces": True, "drawEdges": True,
-                     "edgeColor": (0.125, 0.125, 0.125, 1),
-                     "shader": cShader,
-                     "glOptions": {GL_DEPTH_TEST: False, GL_BLEND: True, GL_CULL_FACE: True,
-                                   'glBlendFunc': (GL_SRC_ALPHA, GL_ONE)}}
+            # ceiling grid
+            grid_item = gl.GLGridItem()
+            grid_item.setSize(SOCCAR_EXTENT_X * 2, SOCCAR_EXTENT_Y * 2, 1)
+            grid_item.setSpacing(grid_spacing, grid_spacing, 1)
+            grid_item.translate(0, 0, SOCCAR_EXTENT_Z)
+            self.w.addItem(grid_item)
 
-        soccar_field_mi = gl.GLMeshItem(vertexes=soccar_field_v, faces=soccar_field_f, **mi_kwargs)
-        self.w.addItem(soccar_field_mi)
+            # side wall grids
+            for sign in (1, -1):
+                grid_item = gl.GLGridItem()
+                grid_item.setSize(SOCCAR_EXTENT_Z, SOCCAR_EXTENT_Y * 2, 1)
+                grid_item.setSpacing(grid_spacing, grid_spacing, 1)
+                grid_item.rotate(90, 0, 1, 0)
+                grid_item.translate(sign * SOCCAR_EXTENT_X, 0, SOCCAR_EXTENT_Z / 2)
+                self.w.addItem(grid_item)
+
+            # Create soccar_field
+            mi_kwargs = {"smooth": False, "drawFaces": True, "drawEdges": True,
+                         "edgeColor": (0.125, 0.125, 0.125, 1),
+                         "shader": cShader,
+                         "glOptions": {GL_DEPTH_TEST: False, GL_BLEND: True, GL_CULL_FACE: True,
+                                       'glBlendFunc': (GL_SRC_ALPHA, GL_ONE)}}
+
+            soccar_field_mi = gl.GLMeshItem(vertexes=soccar_field_v,
+                                            faces=soccar_field_f, **mi_kwargs)
+            self.w.addItem(soccar_field_mi)
 
         # Create ball geometry
         ball_radius = self.arena.ball.get_radius()

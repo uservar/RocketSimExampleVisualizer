@@ -3,6 +3,7 @@ __pycache__/
 venv/
 target/
 assets/
+build/
 collision_meshes/
 *.pyd
 *.so
