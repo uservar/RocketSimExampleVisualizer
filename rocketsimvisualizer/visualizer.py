@@ -96,9 +96,6 @@ class Visualizer:
         GenericController.cycle_targets = lambda *args: self.cycle_targets()
         self.app.focusChanged.connect(self.controller.reset_controls)
 
-        self.car_index = 0  # index of the car we control/spectate
-        self.target_index = -1  # item to track with target cam
-        self.manual_swivel = False  # wether or not to allow manual camera swivel
         self.w.mousePressEvent = self.mousePressEvent
         self.w.mouseReleaseEvent = self.mouseReleaseEvent
 
@@ -117,6 +114,10 @@ class Visualizer:
         self.text_item = GL2DTextItem()
         self.text_item.setDepthValue(2)
         self.w.addItem(self.text_item)
+
+        self.car_index = 0  # index of the car we control/spectate
+        self.target_index = -1  # item to track with target cam
+        self.manual_swivel = False  # wether or not to allow manual camera swivel
 
         # Add surface grids
         grid_spacing = 512
@@ -183,11 +184,21 @@ class Visualizer:
             self.pads_mi.append(pad_box_mi)
             self.w.addItem(pad_box_mi)
 
-        # Create car geometry
         self.cars_mi = []
-        for car in arena.get_cars():
+        self.init_cars()
 
-            car_color = self.blue_color if car.team == rs.BLUE else self.orange_color
+        self.tick_time = time.perf_counter()
+        self.fps_t0 = time.perf_counter()
+        self.update()
+
+    def init_cars(self):
+
+        if self.cars_mi:
+            self.w.items = [i for i in self.w.items if i not in self.cars_mi]
+            self.cars_mi.clear()
+
+        # Create car geometry
+        for car in self.arena.get_cars():
 
             # car hitbox as mesh
             car_config = car.get_config()
@@ -195,11 +206,9 @@ class Visualizer:
             hitbox_offset = car_config.hitbox_pos_offset.as_numpy()
 
             hitbox_verts = box_verts * hitbox_size + hitbox_offset * [-1, 1, 1]
-            hitbox_colors = box_colors * car_color
 
             car_mi = gl.GLMeshItem(vertexes=hitbox_verts, faces=box_faces,
                                    smooth=False, drawFaces=True, drawEdges=True,
-                                   faceColors=hitbox_colors,
                                    edgeColor=self.white_color)
 
             self.w.addItem(car_mi)
@@ -227,10 +236,6 @@ class Visualizer:
                     wheel_mi.translate(*wheel_pos)
                     wheel_mi.rotate(90, 1, 0, 0, local=True)
                     wheel_mi.setParentItem(car_mi)
-
-        self.tick_time = time.perf_counter()
-        self.fps_t0 = time.perf_counter()
-        self.update()
 
     def get_cam_targets(self):
         if not self.cars_mi:
@@ -292,7 +297,12 @@ class Visualizer:
 
     def update_cars_data(self):
 
-        for i, car in enumerate(self.arena.get_cars()):
+        cars = self.arena.get_cars()
+
+        if len(cars) != len(self.cars_mi):
+            self.init_cars()
+
+        for i, car in enumerate(cars):
 
             car_state = car.get_state()
             car_angles = car_state.angles
@@ -309,6 +319,10 @@ class Visualizer:
 
             # visual indicator for going supersonic
             self.cars_mi[i].opts["edgeColor"] = self.black_color if car_state.is_supersonic else self.white_color
+
+            car_color = self.blue_color if car.team == rs.BLUE else self.orange_color
+            hitbox_colors = box_colors * car_color
+            self.cars_mi[i].opts["meshdata"].setFaceColors(hitbox_colors)
 
     def update_camera_data(self):
 
