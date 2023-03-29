@@ -123,8 +123,8 @@ class XboxController(GenericController):
         self.controls.boost = controls["B"]
 
         if controls['Y'] and not self.y_pressed:
-            self.target_cam = not self.target_cam
             self.y_pressed = True
+            self.toggle_target_cam()
 
         if controls['START'] and not self.start_pressed:
             self.start_pressed = True

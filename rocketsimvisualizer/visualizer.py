@@ -80,6 +80,12 @@ class Visualizer:
         self.overwrite_controls = overwrite_controls
         self.config_dict = config_dict
 
+        self.car_index = 0  # index of the car we control/spectate
+        self.target_index = -1  # item to track with target cam
+        self.manual_swivel = False  # wether or not to allow manual camera swivel
+        self.target_cam = True  # general form of ball cam
+        self.free_cam = False  # don't use player cam
+
         if self.config_dict is None:
             print("Using default configs")
             self.config_dict = default_config_dict
@@ -94,6 +100,9 @@ class Visualizer:
 
         GenericController.switch_car = lambda *args: self.switch_car()
         GenericController.cycle_targets = lambda *args: self.cycle_targets()
+        GenericController.toggle_target_cam = lambda *args: self.toggle_target_cam()
+        GenericController.toggle_free_cam = lambda *args: self.toggle_free_cam()
+
         self.app.focusChanged.connect(self.controller.reset_controls)
 
         self.w.mousePressEvent = self.mousePressEvent
@@ -114,10 +123,6 @@ class Visualizer:
         self.text_item = GL2DTextItem()
         self.text_item.setDepthValue(2)
         self.w.addItem(self.text_item)
-
-        self.car_index = 0  # index of the car we control/spectate
-        self.target_index = -1  # item to track with target cam
-        self.manual_swivel = False  # wether or not to allow manual camera swivel
 
         # Add surface grids
         grid_spacing = 512
@@ -258,6 +263,12 @@ class Visualizer:
             self.arena.get_cars()[self.car_index].set_controls(rs.CarControls())
         self.car_index = (self.car_index + 1) % len(self.cars_mi)
 
+    def toggle_target_cam(self):
+        self.target_cam = not self.target_cam
+
+    def toggle_free_cam(self):
+        self.free_cam = not self.free_cam
+
     def mousePressEvent(self, ev):
         lpos = ev.position() if hasattr(ev, 'position') else ev.localPos()
         self.w.mousePos = lpos
@@ -326,11 +337,11 @@ class Visualizer:
 
     def update_camera_data(self):
 
-        if self.controller.free_cam:
+        if self.free_cam:
             return
 
         # calculate target cam values
-        if self.controller.target_cam and not self.manual_swivel:
+        if self.target_cam and not self.manual_swivel:
             cam_pos = self.w.cameraPosition()
             target_pos = self.get_cam_target().transform().matrix()[:3, 3]
             rel_target_pos = (target_pos - cam_pos) * [-1, 1, 1]
@@ -356,7 +367,7 @@ class Visualizer:
             self.w.opts["center"] = pg.Vector(-car_state.pos.x, car_state.pos.y,
                                               car_state.pos.z + self.cam_dict["HEIGHT"])
 
-            if not self.controller.target_cam and not self.manual_swivel:
+            if not self.target_cam and not self.manual_swivel:
                 # non-target_cam cam
                 car_vel_2d_norm = math.sqrt(car_state.vel.y ** 2 + car_state.vel.x ** 2)
                 if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes

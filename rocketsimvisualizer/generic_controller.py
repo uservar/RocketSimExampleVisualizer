@@ -7,8 +7,6 @@ class GenericController:
         self.input_dict = input_dict
         self.is_pressed_dict = {input_key: False for input_key in self.input_dict.values()}
         self.controls = rs.CarControls()
-        self.target_cam = True
-        self.free_cam = False
 
     def reset_controls(self):
         for key in self.is_pressed_dict.keys():
@@ -25,4 +23,12 @@ class GenericController:
 
     @classmethod
     def cycle_targets():
+        pass
+
+    @classmethod
+    def toggle_target_cam():
+        pass
+
+    @classmethod
+    def toggle_free_cam():
         pass
