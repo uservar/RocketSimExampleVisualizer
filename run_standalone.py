@@ -1,5 +1,5 @@
 from rocketsimvisualizer import VisualizerThread, CompositeController
-import pyrocketsim as rs
+import RocketSim as rs
 import tomli
 
 with open("rsvconfig.toml", "rb") as file:
@@ -7,18 +7,12 @@ with open("rsvconfig.toml", "rb") as file:
 
 
 def main():
-    # Initialize RocketSim (loads arena collision meshes, etc.)
-    rs.init()
 
     # setup rocketsim arena
     tick_rate = 120
     tick_skip = 2
     arena = rs.Arena(rs.SOCCAR, tick_rate)
     print(f"Arena tick rate: {arena.tick_rate}")
-
-    mutator_config = arena.get_mutator_config()
-    # mutator_config.boost_used_per_second = 0  # infinite boost
-    arena.set_mutator_config(mutator_config)
 
     # setup rocketsim cars
     for i in range(2):

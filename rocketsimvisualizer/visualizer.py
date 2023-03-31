@@ -9,7 +9,7 @@ from OpenGL.GL import *
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
-import pyrocketsim as rs
+import RocketSim as rs
 
 import numpy as np
 
@@ -185,7 +185,8 @@ class Visualizer:
             pad_box_mi = gl.GLMeshItem(vertexes=pad_box_verts, faces=box_faces,
                                        drawFaces=False, drawEdges=True,
                                        edgeColor=pad_box_edge_color)
-            pad_box_mi.translate(-pad.pos.x, pad.pos.y, pad.pos.z)
+            pad_pos = pad.get_pos()
+            pad_box_mi.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
             self.pads_mi.append(pad_box_mi)
             self.w.addItem(pad_box_mi)
 
@@ -316,7 +317,7 @@ class Visualizer:
         for i, car in enumerate(cars):
 
             car_state = car.get_state()
-            car_angles = car_state.angles
+            car_angles = car_state.rot_mat.as_angle()
 
             self.cars_mi[i].resetTransform()
 
@@ -390,11 +391,9 @@ class Visualizer:
             for key in dir(car_state):
                 if not key.startswith("_"):
                     value = getattr(car_state, key)
-                    if isinstance(value, (float, rs.Vec, rs.Angle,
-                                          rs.RotMat, rs.WorldContact,
-                                          rs.CarContact, rs.CarControls)):
+                    try:
                         text += f"{key} = {value:.2f}\n"
-                    else:
+                    except TypeError:
                         text += f"{key} = {value}\n"
 
         self.text_item.text = text

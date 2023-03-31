@@ -1,4 +1,4 @@
-import pyrocketsim as rs
+import RocketSim as rs
 
 
 class GenericController:
