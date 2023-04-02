@@ -387,25 +387,29 @@ class Visualizer:
         fps = 1 / (time.perf_counter() - self.fps_t0)
         text += f"fps = {fps:.0f}\n"
 
+        ball_state = self.arena.ball.get_state()
+        var_names = ["ball_state"]
+
         # car info
         if self.cars_mi:
             car_index = self.car_index % len(self.cars_mi)
             car = self.arena.get_cars()[car_index]
             car_state = car.get_state()
-            ball_state = self.arena.ball.get_state()
-            for var_name in ("car_state", "ball_state"):
-                var = locals()[var_name]
-                text += f"\n{var_name}:\n"
-                for key in dir(var):
-                    value = getattr(var, key)
-                    if not key.startswith("_"):
-                        if not isinstance(value, (bool, int)):
-                            try:
-                                text += f"{key} = {value:.2f}\n"
-                            except TypeError:
-                                pass
-                        else:
-                            text += f"{key} = {value}\n"
+            var_names += ["car_state"]
+
+        for var_name in var_names:
+            var = locals()[var_name]
+            text += f"\n{var_name}:\n"
+            for key in dir(var):
+                value = getattr(var, key)
+                if not key.startswith("_"):
+                    if not isinstance(value, (bool, int)):
+                        try:
+                            text += f"{key} = {value:.2f}\n"
+                        except TypeError:
+                            pass
+                    else:
+                        text += f"{key} = {value}\n"
 
         self.text_item.text = text
         self.fps_t0 = time.perf_counter()
@@ -419,6 +423,8 @@ class Visualizer:
             self.update_text_data()
 
     def update(self):
+        self.update_plot_data()
+
         # only set car controls if overwrite_controls is true and there's at least one car
         if self.overwrite_controls and self.cars_mi:
             car_index = self.car_index % len(self.cars_mi)
@@ -430,8 +436,6 @@ class Visualizer:
         # only call arena.step() if running in standalone mode
         if self.step_arena:
             self.arena.step(self.tick_skip)
-
-        self.update_plot_data()
 
     def tick(self):
         while (1 / self.fps - (time.perf_counter() - self.tick_time)) > 1e-6:
