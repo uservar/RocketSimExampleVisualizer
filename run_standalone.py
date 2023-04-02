@@ -14,6 +14,8 @@ def main():
     arena = rs.Arena(rs.SOCCAR, tick_rate)
     print(f"Arena tick rate: {arena.tick_rate}")
 
+    arena.set_goal_score_callback(lambda arena, team, user_data: arena.reset_kickoff(), None)
+
     # setup rocketsim cars
     for i in range(2):
         team = rs.BLUE if i % 2 else rs.ORANGE
@@ -28,6 +30,7 @@ def main():
                          tick_rate=tick_rate,  # 120 by default
                          tick_skip=tick_skip,  # 2 by default
                          step_arena=True,  # False by default, handle physics ticks
+                         enable_debug_text=True,  # True by default, render debug info
                          overwrite_controls=True,  # False by default, use Keyboard/Controller
                          config_dict=config_dict,  # None by default, camera/input config
                          controller_class=controller_class)  # None by default, controller type

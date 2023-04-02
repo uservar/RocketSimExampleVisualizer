@@ -63,8 +63,11 @@ cShader = ShaderProgram('cShader', [
 class Visualizer:
     def __init__(self, arena, fps=60,
                  tick_rate=120, tick_skip=2,
-                 step_arena=False, overwrite_controls=False,
-                 config_dict=None, controller_class=None):
+                 step_arena=False,
+                 enable_debug_text=True,
+                 overwrite_controls=False,
+                 config_dict: dict = None,
+                 controller_class: GenericController = None):
 
         self.app = pg.mkQApp()
         self.w = gl.GLViewWidget()
@@ -77,6 +80,7 @@ class Visualizer:
         self.tick_rate = tick_rate
         self.tick_skip = tick_skip
         self.step_arena = step_arena
+        self.enable_debug_text = enable_debug_text
         self.overwrite_controls = overwrite_controls
         self.config_dict = config_dict
 
@@ -120,7 +124,7 @@ class Visualizer:
         self.w.show()
 
         # text info
-        self.text_item = GL2DTextItem()
+        self.text_item = GL2DTextItem(font_size=11)
         self.text_item.setDepthValue(2)
         self.w.addItem(self.text_item)
 
@@ -381,20 +385,27 @@ class Visualizer:
 
         # fps
         fps = 1 / (time.perf_counter() - self.fps_t0)
-        text += f"{fps = :.0f}\n"
+        text += f"fps = {fps:.0f}\n"
 
         # car info
         if self.cars_mi:
             car_index = self.car_index % len(self.cars_mi)
             car = self.arena.get_cars()[car_index]
             car_state = car.get_state()
-            for key in dir(car_state):
-                if not key.startswith("_"):
-                    value = getattr(car_state, key)
-                    try:
-                        text += f"{key} = {value:.2f}\n"
-                    except TypeError:
-                        text += f"{key} = {value}\n"
+            ball_state = self.arena.ball.get_state()
+            for var_name in ("car_state", "ball_state"):
+                var = locals()[var_name]
+                text += f"\n{var_name}:\n"
+                for key in dir(var):
+                    value = getattr(var, key)
+                    if not key.startswith("_"):
+                        if not isinstance(value, (bool, int)):
+                            try:
+                                text += f"{key} = {value:.2f}\n"
+                            except TypeError:
+                                pass
+                        else:
+                            text += f"{key} = {value}\n"
 
         self.text_item.text = text
         self.fps_t0 = time.perf_counter()
@@ -404,7 +415,8 @@ class Visualizer:
         self.update_ball_data()
         self.update_cars_data()
         self.update_camera_data()
-        self.update_text_data()
+        if self.enable_debug_text:
+            self.update_text_data()
 
     def update(self):
         # only set car controls if overwrite_controls is true and there's at least one car
@@ -440,7 +452,10 @@ class VisualizerThread(threading.Thread):
         super(VisualizerThread, self).__init__()
         self.args = args
         self.kwargs = kwargs
+        self.initialized = False
+        self.visualizer: Visualizer = None
 
     def run(self):
-        visualizer = Visualizer(*self.args, **self.kwargs)
-        visualizer.animation()
+        self.visualizer = Visualizer(*self.args, **self.kwargs)
+        self.initialized = True
+        self.visualizer.animation()
