@@ -264,7 +264,7 @@ class Visualizer:
 
     def switch_car(self):
         cars = self.arena.get_cars()
-        if cars:
+        if self.car_index < len(cars):
             if self.overwrite_controls:
                 # reset car controls before switching cars
                 cars[self.car_index].set_controls(rs.CarControls())
@@ -425,19 +425,21 @@ class Visualizer:
             self.update_text_data()
 
     def update(self):
-        self.update_plot_data()
-
         # only set car controls if overwrite_controls is true and there's at least one car
         if self.overwrite_controls and self.cars_mi:
             car_index = self.car_index % len(self.cars_mi)
             controls = self.controller.get_controls()
             controls.clamp_fix()
-            car = self.arena.get_cars()[car_index]
-            car.set_controls(controls)
+            cars = self.arena.get_cars()
+            if car_index < len(cars):
+                car = self.arena.get_cars()[car_index]
+                car.set_controls(controls)
 
         # only call arena.step() if running in standalone mode
         if self.step_arena:
             self.arena.step(self.tick_skip)
+
+        self.update_plot_data()
 
     def tick(self):
         while (1 / self.fps - (time.perf_counter() - self.tick_time)) > 1e-6:
