@@ -16,7 +16,7 @@ class GenericController:
     def get_controls(self):
         return self.controls
 
-    # These two methods will be overwritten later
+    # These methods will be overwritten later
     @classmethod
     def switch_car():
         pass

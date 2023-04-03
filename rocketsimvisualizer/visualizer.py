@@ -263,10 +263,12 @@ class Visualizer:
         self.target_index = (self.target_index + 1) % len(targets)
 
     def switch_car(self):
-        if self.overwrite_controls:
-            # reset car controls before switching cars
-            self.arena.get_cars()[self.car_index].set_controls(rs.CarControls())
-        self.car_index = (self.car_index + 1) % len(self.cars_mi)
+        cars = self.arena.get_cars()
+        if cars:
+            if self.overwrite_controls:
+                # reset car controls before switching cars
+                cars[self.car_index].set_controls(rs.CarControls())
+            self.car_index = (self.car_index + 1) % len(self.cars_mi)
 
     def toggle_target_cam(self):
         self.target_cam = not self.target_cam

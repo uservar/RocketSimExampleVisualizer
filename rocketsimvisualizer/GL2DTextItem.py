@@ -5,8 +5,8 @@ from pyqtgraph.Qt import QtCore, QtGui
 class GL2DTextItem(GLGraphicsItem.GLGraphicsItem):
     def __init__(self, font_size=11, **kwds):
         super().__init__(**kwds)
-        self.text = ""
         self.font_size = font_size
+        self.text = ""
 
     def paint(self):
         self.setupGLState()
