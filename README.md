@@ -1,6 +1,6 @@
 # RocketSimExampleVisualizer
 
-A pyqtgraph visualizer for [RocketSim](https://github.com/ZealanL/RocketSim) using custom [python bindings](https://github.com/uservar/pyrocketsim)
+A pyqtgraph visualizer for [RocketSim](https://github.com/ZealanL/RocketSim) using [python bindings](https://github.com/mtheall/RocketSim/tree/python-dev)
 
 ## Installation
 
