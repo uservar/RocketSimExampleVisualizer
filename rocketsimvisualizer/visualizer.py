@@ -9,7 +9,7 @@ from OpenGL.GL import *
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
-import RocketSim as rs
+import pyrocketsim as rs
 
 import numpy as np
 
@@ -189,7 +189,7 @@ class Visualizer:
             pad_box_mi = gl.GLMeshItem(vertexes=pad_box_verts, faces=box_faces,
                                        drawFaces=False, drawEdges=True,
                                        edgeColor=pad_box_edge_color)
-            pad_pos = pad.get_pos()
+            pad_pos = pad.pos
             pad_box_mi.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
             self.pads_mi.append(pad_box_mi)
             self.w.addItem(pad_box_mi)
