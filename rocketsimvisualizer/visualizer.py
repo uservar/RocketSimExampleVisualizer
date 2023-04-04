@@ -84,8 +84,8 @@ class Visualizer:
         self.overwrite_controls = overwrite_controls
         self.config_dict = config_dict
 
-        self.car_index = 0  # index of the car we control/spectate
-        self.target_index = -1  # item to track with target cam
+        self.car_id = None  # id of the car we control/spectate
+        self.target_index = 0  # item to track with target cam
         self.manual_swivel = False  # wether or not to allow manual camera swivel
         self.target_cam = True  # general form of ball cam
         self.free_cam = False  # don't use player cam
@@ -194,7 +194,7 @@ class Visualizer:
             self.pads_mi.append(pad_box_mi)
             self.w.addItem(pad_box_mi)
 
-        self.cars_mi = []
+        self.car_mi_dict = {}
         self.init_cars()
 
         self.tick_time = time.perf_counter()
@@ -203,9 +203,9 @@ class Visualizer:
 
     def init_cars(self):
 
-        if self.cars_mi:
-            self.w.items = [i for i in self.w.items if i not in self.cars_mi]
-            self.cars_mi.clear()
+        if self.car_mi_dict:
+            self.w.items = [i for i in self.w.items if i not in self.car_mi_dict.values()]
+            self.car_mi_dict.clear()
 
         # Create car geometry
         for car in self.arena.get_cars():
@@ -222,7 +222,7 @@ class Visualizer:
                                    edgeColor=self.white_color)
 
             self.w.addItem(car_mi)
-            self.cars_mi.append(car_mi)
+            self.car_mi_dict[car.id] = car_mi
 
             # axis item
             axis_item = gl.GLAxisItem()
@@ -247,11 +247,15 @@ class Visualizer:
                     wheel_mi.rotate(90, 1, 0, 0, local=True)
                     wheel_mi.setParentItem(car_mi)
 
+        if self.car_id not in self.car_mi_dict:
+            self.switch_car()
+
     def get_cam_targets(self):
-        if not self.cars_mi:
+        if not self.car_mi_dict:
             return [self.ball_mi]
-        targets = self.cars_mi + [self.ball_mi]
-        targets.pop(self.car_index)
+        sorted_car_mi_ids = sorted(self.car_mi_dict)
+        sorted_car_mi_ids.pop(sorted_car_mi_ids.index(self.car_id))
+        targets = [self.ball_mi] + [self.car_mi_dict[car_id] for car_id in sorted_car_mi_ids]
         return targets
 
     def get_cam_target(self):
@@ -263,12 +267,22 @@ class Visualizer:
         self.target_index = (self.target_index + 1) % len(targets)
 
     def switch_car(self):
-        cars = self.arena.get_cars()
-        if self.car_index < len(cars):
-            if self.overwrite_controls:
-                # reset car controls before switching cars
-                cars[self.car_index].set_controls(rs.CarControls())
-            self.car_index = (self.car_index + 1) % len(self.cars_mi)
+        if self.overwrite_controls and self.car_id:
+            # reset car controls before switching cars
+            car = self.arena.get_car(self.car_id)
+            if car:
+                car.set_controls(rs.CarControls())
+
+        if self.car_mi_dict:
+            sorted_car_mi_ids = sorted(self.car_mi_dict)
+            if self.car_id in sorted_car_mi_ids:
+                car_index = sorted_car_mi_ids.index(self.car_id)
+                car_index = (car_index + 1) % len(sorted_car_mi_ids)
+                self.car_id = sorted_car_mi_ids[car_index]
+            elif len(sorted_car_mi_ids) > 0:
+                self.car_id = sorted_car_mi_ids[0]
+            else:
+                self.car_id = None
 
     def toggle_target_cam(self):
         self.target_cam = not self.target_cam
@@ -317,30 +331,31 @@ class Visualizer:
 
         cars = self.arena.get_cars()
 
-        if len(cars) != len(self.cars_mi):
+        if set([car.id for car in cars]) != set(self.car_mi_dict.keys()):
             self.init_cars()
 
-        for i, car in enumerate(cars):
+        for car in cars:
 
             car_state = car.get_state()
             car_angles = car_state.rot_mat.as_angle()
 
-            self.cars_mi[i].resetTransform()
+            self.car_mi_dict[car.id].resetTransform()
 
             # location
-            self.cars_mi[i].translate(-car_state.pos.x, car_state.pos.y, car_state.pos.z)
+            self.car_mi_dict[car.id].translate(-car_state.pos.x, car_state.pos.y, car_state.pos.z)
 
             # rotation
-            self.cars_mi[i].rotate(car_angles.yaw / math.pi * 180, 0, 0, -1, local=True)
-            self.cars_mi[i].rotate(car_angles.pitch / math.pi * 180, 0, 1, 0, local=True)
-            self.cars_mi[i].rotate(car_angles.roll / math.pi * 180, -1, 0, 0, local=True)
+            self.car_mi_dict[car.id].rotate(car_angles.yaw / math.pi * 180, 0, 0, -1, local=True)
+            self.car_mi_dict[car.id].rotate(car_angles.pitch / math.pi * 180, 0, 1, 0, local=True)
+            self.car_mi_dict[car.id].rotate(car_angles.roll / math.pi * 180, -1, 0, 0, local=True)
 
             # visual indicator for going supersonic
-            self.cars_mi[i].opts["edgeColor"] = self.black_color if car_state.is_supersonic else self.white_color
+            edge_color = self.black_color if car_state.is_supersonic else self.white_color
+            self.car_mi_dict[car.id].opts["edgeColor"] = edge_color
 
             car_color = self.blue_color if car.team == rs.Team.BLUE else self.orange_color
             hitbox_colors = box_colors * car_color
-            self.cars_mi[i].opts["meshdata"].setFaceColors(hitbox_colors)
+            self.car_mi_dict[car.id].opts["meshdata"].setFaceColors(hitbox_colors)
 
     def update_camera_data(self):
 
@@ -365,22 +380,22 @@ class Visualizer:
             self.w.setCameraParams(azimuth=-target_azimuth / math.pi * 180,
                                    elevation=self.cam_dict["ANGLE"] - smaller_target_elevation / math.pi * 180)
 
-        if self.cars_mi:
-            car_index = self.car_index % len(self.cars_mi)
-            car = self.arena.get_cars()[car_index]
-            car_state = car.get_state()
+        if self.car_mi_dict:
 
-            # center camera around the car
-            self.w.opts["center"] = pg.Vector(-car_state.pos.x, car_state.pos.y,
-                                              car_state.pos.z + self.cam_dict["HEIGHT"])
+            car = self.arena.get_car(self.car_id)
+            if car:
+                car_state = car.get_state()
+                # center camera around the car
+                self.w.opts["center"] = pg.Vector(-car_state.pos.x, car_state.pos.y,
+                                                  car_state.pos.z + self.cam_dict["HEIGHT"])
 
-            if not self.target_cam and not self.manual_swivel:
-                # non-target_cam cam
-                car_vel_2d_norm = math.sqrt(car_state.vel.y ** 2 + car_state.vel.x ** 2)
-                if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
-                    car_vel_azimuth = math.atan2(car_state.vel.y, car_state.vel.x)
-                    self.w.setCameraParams(azimuth=-car_vel_azimuth / math.pi * 180,
-                                           elevation=self.cam_dict["ANGLE"])
+                if not self.target_cam and not self.manual_swivel:
+                    # non-target_cam cam
+                    car_vel_2d_norm = math.sqrt(car_state.vel.y ** 2 + car_state.vel.x ** 2)
+                    if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
+                        car_vel_azimuth = math.atan2(car_state.vel.y, car_state.vel.x)
+                        self.w.setCameraParams(azimuth=-car_vel_azimuth / math.pi * 180,
+                                               elevation=self.cam_dict["ANGLE"])
 
     def update_text_data(self):
         text = ""
@@ -393,9 +408,8 @@ class Visualizer:
         var_names = ["ball_state"]
 
         # car info
-        if self.cars_mi:
-            car_index = self.car_index % len(self.cars_mi)
-            car = self.arena.get_cars()[car_index]
+        if self.car_mi_dict:
+            car = self.arena.get_car(self.car_id)
             car_state = car.get_state()
             var_names += ["car_state"]
 
@@ -426,13 +440,11 @@ class Visualizer:
 
     def update(self):
         # only set car controls if overwrite_controls is true and there's at least one car
-        if self.overwrite_controls and self.cars_mi:
-            car_index = self.car_index % len(self.cars_mi)
+        if self.overwrite_controls and self.car_mi_dict:
             controls = self.controller.get_controls()
             controls.clamp_fix()
-            cars = self.arena.get_cars()
-            if car_index < len(cars):
-                car = self.arena.get_cars()[car_index]
+            car = self.arena.get_car(self.car_id)
+            if car:
                 car.set_controls(controls)
 
         # only call arena.step() if running in standalone mode
