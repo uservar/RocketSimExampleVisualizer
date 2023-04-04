@@ -131,7 +131,7 @@ class Visualizer:
         # Add surface grids
         grid_spacing = 512
 
-        if self.arena.game_mode == rs.SOCCAR:
+        if self.arena.game_mode == rs.GameMode.SOCCAR:
             # ground grids
             grid_item = gl.GLGridItem()
             grid_item.setSize(SOCCAR_EXTENT_X * 2, SOCCAR_EXTENT_Y * 2, 1)
@@ -338,7 +338,7 @@ class Visualizer:
             # visual indicator for going supersonic
             self.cars_mi[i].opts["edgeColor"] = self.black_color if car_state.is_supersonic else self.white_color
 
-            car_color = self.blue_color if car.team == rs.BLUE else self.orange_color
+            car_color = self.blue_color if car.team == rs.Team.BLUE else self.orange_color
             hitbox_colors = box_colors * car_color
             self.cars_mi[i].opts["meshdata"].setFaceColors(hitbox_colors)
 

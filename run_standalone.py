@@ -11,15 +11,15 @@ def main():
     # setup rocketsim arena
     tick_rate = 120
     tick_skip = 2
-    arena = rs.Arena(rs.SOCCAR, tick_rate)
+    arena = rs.Arena(rs.GameMode.SOCCAR, tick_rate)
     print(f"Arena tick rate: {arena.tick_rate}")
 
     arena.set_goal_score_callback(lambda arena, team, user_data: arena.reset_kickoff(), None)
 
     # setup rocketsim cars
     for i in range(2):
-        team = rs.BLUE if i % 2 else rs.ORANGE
-        car = arena.add_car(team, rs.OCTANE)
+        team = rs.Team.BLUE if i % 2 else rs.Team.ORANGE
+        car = arena.add_car(team, rs.CarConfig(0))
         print(f"Car added to team {team} with id {car.id}")
 
     # controller to use
