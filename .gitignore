@@ -8,4 +8,4 @@ collision_meshes/
 *.pyd
 *.so
 *.egg-info
-rsvconfig.toml
+*.zip

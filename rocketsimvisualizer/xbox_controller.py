@@ -128,7 +128,7 @@ class XboxController(GenericController):
 
         if controls['START'] and not self.start_pressed:
             self.start_pressed = True
-            self.cycle_targets()
+            self.switch_target()
 
         if controls['BACK'] and not self.back_pressed:
             self.back_pressed = True

@@ -22,7 +22,7 @@ class GenericController:
         pass
 
     @classmethod
-    def cycle_targets():
+    def switch_target():
         pass
 
     @classmethod

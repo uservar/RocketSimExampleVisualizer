@@ -9,7 +9,7 @@ J = "JUMP"
 Shift = "POWERSLIDE"
 K = "BOOST"
 Space = "TARGET_CAM"
-Tab = "CYCLE_TARGETS"
+Tab = "SWITCH_TARGET"
 Enter = "SWITCH_CAR"
 Escape = "FREE_CAM"
 
