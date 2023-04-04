@@ -85,7 +85,7 @@ class Visualizer:
         self.config_dict = config_dict
 
         self.car_id = None  # id of the car we control/spectate
-        self.target_index = 0  # item to track with target cam
+        self.target_id = 0  # item to track with target cam
         self.manual_swivel = False  # wether or not to allow manual camera swivel
         self.target_cam = True  # general form of ball cam
         self.free_cam = False  # don't use player cam
@@ -103,7 +103,7 @@ class Visualizer:
         self.controller = controller_class(self.input_dict)
 
         GenericController.switch_car = lambda *args: self.switch_car()
-        GenericController.cycle_targets = lambda *args: self.cycle_targets()
+        GenericController.switch_target = lambda *args: self.switch_target()
         GenericController.toggle_target_cam = lambda *args: self.toggle_target_cam()
         GenericController.toggle_free_cam = lambda *args: self.toggle_free_cam()
 
@@ -250,21 +250,32 @@ class Visualizer:
         if self.car_id not in self.car_mi_dict:
             self.switch_car()
 
+        if self.target_id != 0 and self.target_id not in self.car_mi_dict:
+            self.switch_target()
+
     def get_cam_targets(self):
+        targets = {0: self.ball_mi}
         if not self.car_mi_dict:
-            return [self.ball_mi]
-        sorted_car_mi_ids = sorted(self.car_mi_dict)
-        sorted_car_mi_ids.pop(sorted_car_mi_ids.index(self.car_id))
-        targets = [self.ball_mi] + [self.car_mi_dict[car_id] for car_id in sorted_car_mi_ids]
+            return targets
+        targets = {**targets, **self.car_mi_dict}
+        targets.pop(self.car_id)
         return targets
 
     def get_cam_target(self):
         targets = self.get_cam_targets()
-        return targets[self.target_index]
+        return targets[self.target_id]
 
-    def cycle_targets(self):
+    def switch_target(self):
         targets = self.get_cam_targets()
-        self.target_index = (self.target_index + 1) % len(targets)
+        sorted_target_ids = sorted(targets)
+        if self.target_id in sorted_target_ids:
+            target_index = sorted_target_ids.index(self.target_id)
+            target_index = (target_index + 1) % len(sorted_target_ids)
+            self.target_id = sorted_target_ids[target_index]
+        elif self.target_id == 0:
+            self.target_id = sorted_target_ids[0]
+        else:
+            self.target_id = 0
 
     def switch_car(self):
         if self.overwrite_controls and self.car_id:

@@ -43,8 +43,8 @@ class KeyboardController(GenericController):
         if self.input_dict.get(key, None) == "SWITCH_CAR" and is_pressed:
             self.switch_car()
 
-        if self.input_dict.get(key, None) == "CYCLE_TARGETS" and is_pressed:
-            self.cycle_targets()
+        if self.input_dict.get(key, None) == "SWITCH_TARGET" and is_pressed:
+            self.switch_target()
 
         self.controls.throttle = self.is_pressed_dict["FORWARD"] - self.is_pressed_dict["BACKWARD"]
         self.controls.steer = self.is_pressed_dict["RIGHT"] - self.is_pressed_dict["LEFT"]
