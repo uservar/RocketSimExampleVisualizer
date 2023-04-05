@@ -201,6 +201,12 @@ class Visualizer:
         self.fps_t0 = time.perf_counter()
         self.update()
 
+    def get_car(self, car_id):
+        try:
+            return self.arena.get_car_from_id(car_id)
+        except KeyError:
+            return None
+
     def init_cars(self):
 
         if self.car_mi_dict:
@@ -280,7 +286,7 @@ class Visualizer:
     def switch_car(self):
         if self.overwrite_controls and self.car_id:
             # reset car controls before switching cars
-            car = self.arena.get_car_from_id(self.car_id)
+            car = self.get_car(self.car_id)
             if car:
                 car.set_controls(rs.CarControls())
 
@@ -393,7 +399,7 @@ class Visualizer:
 
         if self.car_mi_dict:
 
-            car = self.arena.get_car_from_id(self.car_id)
+            car = self.get_car(self.car_id)
             if car:
                 car_state = car.get_state()
                 # center camera around the car
@@ -420,7 +426,7 @@ class Visualizer:
 
         # car info
         if self.car_mi_dict:
-            car = self.arena.get_car_from_id(self.car_id)
+            car = self.get_car(self.car_id)
             car_state = car.get_state()
             var_names += ["car_state"]
 
@@ -454,7 +460,7 @@ class Visualizer:
         if self.overwrite_controls and self.car_mi_dict:
             controls = self.controller.get_controls()
             controls.clamp_fix()
-            car = self.arena.get_car_from_id(self.car_id)
+            car = self.get_car(self.car_id)
             if car:
                 car.set_controls(controls)
 
