@@ -301,6 +301,9 @@ class Visualizer:
             else:
                 self.car_id = None
 
+        if self.car_id == self.target_id:
+            self.switch_target()
+
     def toggle_target_cam(self):
         self.target_cam = not self.target_cam
 
