@@ -19,6 +19,17 @@ import math
 
 import pathlib
 import tomli
+import platform
+
+from time import sleep
+
+if platform.system() == "Windows":
+    python_version_minor = int(platform.python_version_tuple()[1])
+    if python_version_minor < 11:
+        import sleep_until
+
+        def sleep(dt):
+            sleep_until.sleep_until(time.time() + dt)
 
 current_dir = pathlib.Path(__file__).parent
 
@@ -181,13 +192,13 @@ class Visualizer:
         self.w.addItem(self.ball_proj)
 
         self.pads_mi = []
+        big_pad_box_md = gl.MeshData(vertexes=box_verts * pad_sq_dims_big, faces=box_faces)
+        small_pad_box_md = gl.MeshData(vertexes=box_verts * pad_sq_dims_small, faces=box_faces)
         for pad in arena.get_boost_pads():
             # pad hitbox
-            pad_sq_dims = pad_sq_dims_big if pad.is_big else pad_sq_dims_small
-            pad_box_verts = box_verts * pad_sq_dims
+            pad_box_md = big_pad_box_md if pad.is_big else small_pad_box_md
             pad_box_edge_color = self.white_color if pad.is_big else self.white_color / 2
-            pad_box_mi = gl.GLMeshItem(vertexes=pad_box_verts, faces=box_faces,
-                                       drawFaces=False, drawEdges=True,
+            pad_box_mi = gl.GLMeshItem(meshdata=pad_box_md, drawFaces=False, drawEdges=True,
                                        edgeColor=pad_box_edge_color)
             pad_pos = pad.get_pos()
             pad_box_mi.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
@@ -197,9 +208,9 @@ class Visualizer:
         self.car_mi_dict = {}
         self.init_cars()
 
-        self.tick_time = time.perf_counter()
         self.fps_t0 = time.perf_counter()
-        self.update()
+        self.tick_time = time.perf_counter()
+        self.tick_time_drift = 0
 
     def init_cars(self):
 
@@ -234,15 +245,15 @@ class Visualizer:
 
             # wheels
             for wheel_pair in (car_config.front_wheels, car_config.back_wheels):
+                wheel_radius = wheel_pair.wheel_radius
+                wheel_md = gl.MeshData.cylinder(rows=1, cols=8, length=0,
+                                                radius=round(wheel_radius))
                 for sign in (1, -1):
-                    wheel_radius = wheel_pair.wheel_radius
+                    wheel_mi = gl.GLMeshItem(meshdata=wheel_md, drawFaces=False, drawEdges=True,
+                                             smooth=False, edgeColor=self.white_color)
                     wheel_pos = -wheel_pair.connection_point_offset.as_numpy()
                     wheel_pos[1] *= sign
                     wheel_pos[2] += wheel_radius + 4  # guesstimate of compressed suspension
-                    wheel_md = gl.MeshData.cylinder(rows=1, cols=8, length=0,
-                                                    radius=round(wheel_radius))
-                    wheel_mi = gl.GLMeshItem(meshdata=wheel_md, drawFaces=False, drawEdges=True,
-                                             smooth=False, edgeColor=self.white_color)
                     wheel_mi.translate(*wheel_pos)
                     wheel_mi.rotate(90, 1, 0, 0, local=True)
                     wheel_mi.setParentItem(car_mi)
@@ -415,8 +426,13 @@ class Visualizer:
         text = ""
 
         # fps
-        fps = 1 / (time.perf_counter() - self.fps_t0)
+        fps = 0
+        fps_t0 = time.perf_counter()
+        if fps_t0 != self.fps_t0:
+            fps = 1 / (fps_t0 - self.fps_t0)
+        self.fps_t0 = fps_t0
         text += f"fps = {fps:.0f}\n"
+        text += f"tick_time_drift = {self.tick_time_drift * 1000:.1f} ms\n"
 
         ball_state = self.arena.ball.get_state()
         var_names = ["ball_state"]
@@ -442,7 +458,6 @@ class Visualizer:
                         text += f"{key} = {value}\n"
 
         self.text_item.text = text
-        self.fps_t0 = time.perf_counter()
 
     def update_plot_data(self):
         self.update_boost_pad_data()
@@ -468,9 +483,18 @@ class Visualizer:
         self.update_plot_data()
 
     def tick(self):
-        while (1 / self.fps - (time.perf_counter() - self.tick_time)) > 1e-6:
-            pass
-        self.tick_time = time.perf_counter()
+        while True:
+            wait_t0 = time.perf_counter()
+            tick_time_dt = wait_t0 - self.tick_time
+            desired_dt = 1 / self.fps - tick_time_dt - self.tick_time_drift
+            if desired_dt < 0:
+                break
+            elif desired_dt > 5e-4:  # sleep becomes innacurate below this threshold in some systems
+                sleep(desired_dt - 5e-4)
+        tick_time = time.perf_counter()
+        self.tick_time_drift += tick_time - self.tick_time - 1 / self.fps
+        self.tick_time_drift = max(min(self.tick_time_drift, 1 / self.fps), - 1 / self.fps)
+        self.tick_time = tick_time
         self.update()
 
     def animation(self):
