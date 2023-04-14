@@ -489,7 +489,7 @@ class Visualizer:
             desired_dt = 1 / self.fps - tick_time_dt - self.tick_time_drift
             if desired_dt < 0:
                 break
-            elif desired_dt > 5e-4:  # sleep becomes innacurate below this threshold in some systems
+            elif desired_dt > 5e-4:  # sleep_unfil is innacurate below this threshold on windows
                 sleep(desired_dt - 5e-4)
         tick_time = time.perf_counter()
         self.tick_time_drift += tick_time - self.tick_time - 1 / self.fps
