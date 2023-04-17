@@ -10,7 +10,6 @@ def main():
 
     # setup rocketsim arena
     tick_rate = 120
-    tick_skip = 2
     arena = rs.Arena(rs.GameMode.SOCCAR, tick_rate)
     print(f"Arena tick rate: {arena.tick_rate}")
 
@@ -22,11 +21,13 @@ def main():
         car = arena.add_car(team, rs.CarConfig(0))
         print(f"Car added to team {team} with id {car.id}")
 
-    # controller to use
+    # Visualizer arguments
+    fps = 60
+    tick_skip = tick_rate // fps
     controller_class = CompositeController
 
     v = VisualizerThread(arena,  # required, the rest is optional
-                         fps=60,  # 60 by default
+                         fps=fps,  # 60 by default
                          tick_rate=tick_rate,  # 120 by default
                          tick_skip=tick_skip,  # 2 by default
                          step_arena=True,  # False by default, handle physics ticks

@@ -84,7 +84,6 @@ class Visualizer:
         self.w = gl.GLViewWidget()
         self.w.setWindowTitle("pyqtgraph visualizer")
         self.w.setGeometry(0, 50, 1280, 720)
-        self.w.show()
 
         self.arena = arena
         self.fps = fps
@@ -137,24 +136,24 @@ class Visualizer:
         # text info
         self.text_item = GL2DTextItem(font_size=11)
         self.text_item.setDepthValue(2)
-        self.w.addItem(self.text_item)
-
-        # Add surface grids
-        grid_spacing = 512
+        self.addItem(self.text_item)
 
         if self.arena.game_mode == rs.GameMode.SOCCAR:
+            # Add surface grids
+            grid_spacing = 512
+
             # ground grids
             grid_item = gl.GLGridItem()
             grid_item.setSize(SOCCAR_EXTENT_X * 2, SOCCAR_EXTENT_Y * 2, 1)
             grid_item.setSpacing(grid_spacing, grid_spacing, 1)
-            self.w.addItem(grid_item)
+            self.addItem(grid_item)
 
             # ceiling grid
             grid_item = gl.GLGridItem()
             grid_item.setSize(SOCCAR_EXTENT_X * 2, SOCCAR_EXTENT_Y * 2, 1)
             grid_item.setSpacing(grid_spacing, grid_spacing, 1)
             grid_item.translate(0, 0, SOCCAR_EXTENT_Z)
-            self.w.addItem(grid_item)
+            self.addItem(grid_item)
 
             # side wall grids
             for sign in (1, -1):
@@ -163,7 +162,7 @@ class Visualizer:
                 grid_item.setSpacing(grid_spacing, grid_spacing, 1)
                 grid_item.rotate(90, 0, 1, 0)
                 grid_item.translate(sign * SOCCAR_EXTENT_X, 0, SOCCAR_EXTENT_Z / 2)
-                self.w.addItem(grid_item)
+                self.addItem(grid_item)
 
             # Create soccar_field
             mi_kwargs = {"smooth": False, "drawFaces": True, "drawEdges": True,
@@ -174,7 +173,7 @@ class Visualizer:
 
             soccar_field_mi = gl.GLMeshItem(vertexes=soccar_field_v,
                                             faces=soccar_field_f, **mi_kwargs)
-            self.w.addItem(soccar_field_mi)
+            self.addItem(soccar_field_mi)
 
         # Create ball geometry
         ball_radius = self.arena.ball.get_radius()
@@ -183,27 +182,16 @@ class Visualizer:
                                      drawFaces=True, drawEdges=True,
                                      color=(0.1, 0.1, 0.1, 1),
                                      edgeColor=self.white_color)
-        self.w.addItem(self.ball_mi)
+        self.addItem(self.ball_mi)
 
         # Create ground projection for the ball
         ball_proj_md = gl.MeshData.cylinder(rows=1, cols=16, length=0, radius=round(ball_radius))
         self.ball_proj = gl.GLMeshItem(meshdata=ball_proj_md, smooth=False, drawFaces=False,
                                        drawEdges=True, edgeColor=self.white_color)
-        self.w.addItem(self.ball_proj)
+        self.addItem(self.ball_proj)
 
         self.pads_mi = []
-        big_pad_box_md = gl.MeshData(vertexes=box_verts * pad_sq_dims_big, faces=box_faces)
-        small_pad_box_md = gl.MeshData(vertexes=box_verts * pad_sq_dims_small, faces=box_faces)
-        for pad in arena.get_boost_pads():
-            # pad hitbox
-            pad_box_md = big_pad_box_md if pad.is_big else small_pad_box_md
-            pad_box_edge_color = self.white_color if pad.is_big else self.white_color / 2
-            pad_box_mi = gl.GLMeshItem(meshdata=pad_box_md, drawFaces=False, drawEdges=True,
-                                       edgeColor=pad_box_edge_color)
-            pad_pos = pad.get_pos()
-            pad_box_mi.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
-            self.pads_mi.append(pad_box_mi)
-            self.w.addItem(pad_box_mi)
+        self.init_pads()
 
         self.car_mi_dict = {}
         self.init_cars()
@@ -232,7 +220,7 @@ class Visualizer:
                                    smooth=False, drawFaces=True, drawEdges=True,
                                    edgeColor=self.white_color)
 
-            self.w.addItem(car_mi)
+            self.addItem(car_mi)
             self.car_mi_dict[car.id] = car_mi
 
             # axis item
@@ -263,6 +251,25 @@ class Visualizer:
 
         if self.target_id != 0 and self.target_id not in self.car_mi_dict:
             self.switch_target()
+
+    def init_pads(self):
+
+        if self.pads_mi:
+            self.w.items = [i for i in self.w.items if i not in self.pads_mi]
+            self.pads_mi.clear()
+
+        big_pad_box_md = gl.MeshData(vertexes=box_verts * pad_sq_dims_big, faces=box_faces)
+        small_pad_box_md = gl.MeshData(vertexes=box_verts * pad_sq_dims_small, faces=box_faces)
+        for pad in self.arena.get_boost_pads():
+            # pad hitbox
+            pad_box_md = big_pad_box_md if pad.is_big else small_pad_box_md
+            pad_box_edge_color = self.white_color if pad.is_big else self.white_color / 2
+            pad_box_mi = gl.GLMeshItem(meshdata=pad_box_md, drawFaces=False, drawEdges=True,
+                                       edgeColor=pad_box_edge_color)
+            pad_pos = pad.get_pos()
+            pad_box_mi.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
+            self.pads_mi.append(pad_box_mi)
+            self.addItem(pad_box_mi)
 
     def get_cam_targets(self):
         targets = {0: self.ball_mi}
@@ -315,6 +322,15 @@ class Visualizer:
     def toggle_free_cam(self):
         self.free_cam = not self.free_cam
 
+    def addItem(self, item):
+        self.w.items.append(item)
+
+        if self.w.isValid():
+            item.initialize()
+
+        item._setView(self.w)
+        item.update = lambda *args: None
+
     def mousePressEvent(self, ev):
         lpos = ev.position() if hasattr(ev, 'position') else ev.localPos()
         self.w.mousePos = lpos
@@ -324,9 +340,15 @@ class Visualizer:
         self.manual_swivel = False
 
     def update_boost_pad_data(self):
-        for i, pad in enumerate(self.arena.get_boost_pads()):
+        pads = self.arena.get_boost_pads()
+
+        if len(pads) != len(self.pads_mi):
+            self.init_pads()
+
+        for i, pad in enumerate(pads):
             pad_state = pad.get_state()
-            self.pads_mi[i].show() if pad_state.is_active else self.pads_mi[i].hide()
+            if i < len(self.pads_mi):
+                self.pads_mi[i].show() if pad_state.is_active else self.pads_mi[i].hide()
 
     def update_ball_data(self):
 
@@ -360,6 +382,8 @@ class Visualizer:
             self.init_cars()
 
         for car in cars:
+            if car.id not in self.car_mi_dict:
+                continue
 
             car_state = car.get_state()
             car_angles = car_state.rot_mat.as_angle()
@@ -401,9 +425,8 @@ class Visualizer:
                 target_elevation = math.asin(rel_target_pos[2] / rel_target_pos_norm)
 
             smaller_target_elevation = target_elevation * 2 / 3
-
-            self.w.setCameraParams(azimuth=-target_azimuth / math.pi * 180,
-                                   elevation=self.cam_dict["ANGLE"] - smaller_target_elevation / math.pi * 180)
+            self.w.opts["azimuth"] = -target_azimuth / math.pi * 180
+            self.w.opts["elevation"] = self.cam_dict["ANGLE"] - smaller_target_elevation / math.pi * 180
 
         if self.car_mi_dict:
 
@@ -419,8 +442,8 @@ class Visualizer:
                     car_vel_2d_norm = math.sqrt(car_state.vel.y ** 2 + car_state.vel.x ** 2)
                     if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
                         car_vel_azimuth = math.atan2(car_state.vel.y, car_state.vel.x)
-                        self.w.setCameraParams(azimuth=-car_vel_azimuth / math.pi * 180,
-                                               elevation=self.cam_dict["ANGLE"])
+                        self.w.opts["azimuth"] = -car_vel_azimuth / math.pi * 180
+                        self.w.opts["elevation"] = self.cam_dict["ANGLE"]
 
     def update_text_data(self):
         text = ""
@@ -432,7 +455,7 @@ class Visualizer:
             fps = 1 / (fps_t0 - self.fps_t0)
         self.fps_t0 = fps_t0
         text += f"fps = {fps:.0f}\n"
-        text += f"tick_time_drift = {self.tick_time_drift * 1000:.1f} ms\n"
+        text += f"tick_time_drift = {self.tick_time_drift * 1000:.3f} ms\n"
 
         ball_state = self.arena.ball.get_state()
         var_names = ["ball_state"]
@@ -466,6 +489,7 @@ class Visualizer:
         self.update_camera_data()
         if self.enable_debug_text:
             self.update_text_data()
+        self.w.update()
 
     def update(self):
         # only set car controls if overwrite_controls is true and there's at least one car
@@ -487,7 +511,7 @@ class Visualizer:
             wait_t0 = time.perf_counter()
             tick_time_dt = wait_t0 - self.tick_time
             desired_dt = 1 / self.fps - tick_time_dt - self.tick_time_drift
-            if desired_dt < 0:
+            if desired_dt < 1e-7:
                 break
             elif desired_dt > 5e-4:  # sleep_unfil is innacurate below this threshold on windows
                 sleep(desired_dt - 5e-4)
