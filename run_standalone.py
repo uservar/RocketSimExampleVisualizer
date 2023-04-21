@@ -7,12 +7,20 @@ with open("rsvconfig.toml", "rb") as file:
 
 
 def main():
+    # init rocketsim
+    meshes_path = "collision_meshes"
+    rs.init(meshes_path)
 
     # setup rocketsim arena
-    tick_rate = 120
-    arena = rs.Arena(rs.GameMode.SOCCAR, tick_rate)
+    arena = rs.Arena(rs.GameMode.SOCCAR)
     print(f"Arena tick rate: {arena.tick_rate}")
 
+    # set mutators
+    mutator_config = arena.get_mutator_config()
+    mutator_config.boost_used_per_second = 0  # infinite boost
+    arena.set_mutator_config(mutator_config)
+
+    # set goal score callback
     arena.set_goal_score_callback(lambda *args, **kwargs: arena.reset_kickoff(), None)
 
     # setup rocketsim cars
@@ -21,20 +29,16 @@ def main():
         car = arena.add_car(team, rs.CarConfig(0))
         print(f"Car added to team {team} with id {car.id}")
 
-    # Visualizer arguments
-    fps = 60
-    tick_skip = tick_rate // fps
-    controller_class = CompositeController
-
+    # start visualizer
     v = VisualizerThread(arena,  # required, the rest is optional
-                         fps=fps,  # 60 by default
-                         tick_rate=tick_rate,  # 120 by default
-                         tick_skip=tick_skip,  # 2 by default
+                         meshes_path=meshes_path,  # relative path "collision_meshes" by default
+                         fps=60,  # 60 by default
                          step_arena=True,  # False by default, handle physics ticks
+                         tick_skip=2,  # tick_rate / fps by default, used if step_arena is True
                          enable_debug_text=True,  # True by default, render debug info
                          overwrite_controls=True,  # False by default, use Keyboard/Controller
                          config_dict=config_dict,  # None by default, camera/input config
-                         controller_class=controller_class)  # None by default, controller type
+                         controller_class=CompositeController)  # None by default, controller type
     v.start()
 
 

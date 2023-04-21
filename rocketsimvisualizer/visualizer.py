@@ -1,5 +1,5 @@
 from rocketsimvisualizer import KeyboardController, GenericController, GL2DTextItem
-from rocketsimvisualizer.soccar_field import soccar_field_v, soccar_field_f
+from rocketsimvisualizer.arena_mesh import get_arena_mesh
 from rocketsimvisualizer.constants import *
 
 from pyqtgraph.Qt import QtCore, QtGui
@@ -72,13 +72,16 @@ cShader = ShaderProgram('cShader', [
 
 
 class Visualizer:
-    def __init__(self, arena, fps=60,
-                 tick_rate=120, tick_skip=2,
+    def __init__(self, arena,
+                 meshes_path="collision_meshes",
+                 fps=60,
                  step_arena=False,
+                 tick_skip: int = None,
                  enable_debug_text=True,
                  overwrite_controls=False,
                  config_dict: dict = None,
-                 controller_class: GenericController = None):
+                 controller_class: GenericController = None,
+                 **kwargs):
 
         self.app = pg.mkQApp()
         self.w = gl.GLViewWidget()
@@ -86,19 +89,22 @@ class Visualizer:
         self.w.setGeometry(0, 50, 1280, 720)
 
         self.arena = arena
+        self.meshes_path = meshes_path
         self.fps = fps
-        self.tick_rate = tick_rate
-        self.tick_skip = tick_skip
+        self.tick_skip = round(tick_skip)
         self.step_arena = step_arena
         self.enable_debug_text = enable_debug_text
         self.overwrite_controls = overwrite_controls
         self.config_dict = config_dict
 
         self.car_id = None  # id of the car we control/spectate
-        self.target_id = 0  # item to track with target cam
-        self.manual_swivel = False  # wether or not to allow manual camera swivel
-        self.target_cam = True  # general form of ball cam
+        self.target_id = 0  # item to track with target cam, 0 for ball otherwise a car id
+        self.manual_swivel = False  # used when moving the camera manually
+        self.target_cam = True  # general form of ball cam that can track other cars too
         self.free_cam = False  # don't use player cam
+
+        if tick_skip is None:
+            self.tick_skip = round(self.arena.tick_rate / fps)
 
         if self.config_dict is None:
             print("Using default configs")
@@ -140,7 +146,7 @@ class Visualizer:
 
         if self.arena.game_mode == rs.GameMode.SOCCAR:
             # Add surface grids
-            grid_spacing = 512
+            grid_spacing = 1024
 
             # ground grids
             grid_item = gl.GLGridItem()
@@ -171,6 +177,7 @@ class Visualizer:
                          "glOptions": {GL_DEPTH_TEST: False, GL_BLEND: True, GL_CULL_FACE: True,
                                        'glBlendFunc': (GL_SRC_ALPHA, GL_ONE)}}
 
+            soccar_field_v, soccar_field_f = get_arena_mesh(self.meshes_path, "soccar")
             soccar_field_mi = gl.GLMeshItem(vertexes=soccar_field_v,
                                             faces=soccar_field_f, **mi_kwargs)
             self.addItem(soccar_field_mi)
@@ -359,7 +366,7 @@ class Visualizer:
         ball_angvel_np = np.array([ball_state.ang_vel.x, -ball_state.ang_vel.y, ball_state.ang_vel.z])
         rot_angle = np.linalg.norm(ball_angvel_np)
         rot_axis = ball_angvel_np / max(1e-9, rot_angle)
-        delta_rot_angle = rot_angle * self.tick_skip / self.tick_rate
+        delta_rot_angle = rot_angle * self.tick_skip / self.arena.tick_rate
 
         self.ball_mi.rotate(delta_rot_angle / math.pi * 180, *rot_axis, local=False)
 
