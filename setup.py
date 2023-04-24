@@ -6,7 +6,6 @@ with open("README.md", "r") as readme_file:
 
 with open("requirements.txt", "r") as req_file:
     requirements = req_file.readlines()
-    print(requirements)
     if platform.system() == "Windows":
         python_version_minor = int(platform.python_version_tuple()[1])
         if python_version_minor < 11:
