@@ -7,7 +7,7 @@ A pyqtgraph visualizer for [RocketSim](https://github.com/ZealanL/RocketSim) usi
 ```
 git clone https://github.com/uservar/RocketSimExampleVisualizer
 cd RocketSimExampleVisualizer
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ## Usage
