@@ -1,4 +1,4 @@
-from rocketsimvisualizer import VisualizerThread, CompositeController
+from rocketsimvisualizer import Visualizer, CompositeController
 import RocketSim as rs
 import tomli
 
@@ -30,15 +30,15 @@ def main():
         print(f"Car added to team {team} with id {car.id}")
 
     # start visualizer
-    v = VisualizerThread(arena,  # required, the rest is optional
-                         meshes_path=meshes_path,  # relative path "collision_meshes" by default
-                         fps=60,  # 60 by default
-                         step_arena=True,  # False by default, handle physics ticks
-                         tick_skip=2,  # tick_rate / fps by default, used if step_arena is True
-                         enable_debug_text=True,  # True by default, render debug info
-                         overwrite_controls=True,  # False by default, use Keyboard/Controller
-                         config_dict=config_dict,  # None by default, camera/input config
-                         controller_class=CompositeController)  # None by default, controller type
+    v = Visualizer(arena,  # required, the rest is optional
+                   meshes_path=meshes_path,  # relative path "collision_meshes" by default
+                   fps=60,  # 60 by default
+                   step_arena=True,  # False by default, handle physics ticks
+                   tick_skip=2,  # tick_rate / fps by default, used if step_arena is True
+                   enable_debug_text=True,  # True by default, render debug info
+                   overwrite_controls=True,  # False by default, use Keyboard/Controller
+                   config_dict=config_dict,  # None by default, camera/input config
+                   controller_class=CompositeController)  # None by default, controller type
     v.start()
 
 
