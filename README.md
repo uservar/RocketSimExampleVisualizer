@@ -17,6 +17,8 @@ If you just want to use this as a standalone program, simply run:
 python run_standalone.py
 ```
 
+Or checkout `run_standalone_atba.py` for an example of using this with a simple bot.
+
 If you intend to use this in a pre-existing project you can try something like this:
 
 ```python
