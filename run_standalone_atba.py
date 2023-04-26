@@ -56,9 +56,8 @@ def main():
                        step_arena=True,  # False by default, handle physics ticks
                        tick_skip=2,  # tick_rate / fps by default, used if step_arena is True
                        enable_debug_text=True,  # True by default, render debug info
-                       overwrite_controls=True,  # False by default, use Keyboard/Controller
-                       config_dict=config_dict,  # None by default, camera/input config
-                       controller_class=CompositeController)  # None by default, controller type
+                       overwrite_controls=True,  # False by default, use update_controls()
+                       config_dict=config_dict)  # None by default, camera/input config
     v.start()
 
 
