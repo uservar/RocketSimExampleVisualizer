@@ -498,14 +498,17 @@ class Visualizer:
             self.update_text_data()
         self.w.update()
 
+    def update_controls(self):
+        controls = self.controller.get_controls()
+        controls.clamp_fix()
+        car = self.arena.get_car_from_id(self.car_id, None)
+        if car:
+            car.set_controls(controls)
+
     def update(self):
         # only set car controls if overwrite_controls is true and there's at least one car
         if self.overwrite_controls and self.car_mi_dict:
-            controls = self.controller.get_controls()
-            controls.clamp_fix()
-            car = self.arena.get_car_from_id(self.car_id, None)
-            if car:
-                car.set_controls(controls)
+            self.update_controls()
 
         # only call arena.step() if running in standalone mode
         if self.step_arena:
@@ -528,7 +531,7 @@ class Visualizer:
         self.tick_time = tick_time
         self.update()
 
-    def animation(self):
+    def start(self):
         timer = QtCore.QTimer()
         timer.timeout.connect(self.tick)
         timer.start()
@@ -547,4 +550,4 @@ class VisualizerThread(threading.Thread):
     def run(self):
         self.visualizer = Visualizer(*self.args, **self.kwargs)
         self.initialized = True
-        self.visualizer.animation()
+        self.visualizer.start()
