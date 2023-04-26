@@ -10,7 +10,7 @@ Shift = "POWERSLIDE"
 K = "BOOST"
 Space = "TARGET_CAM"
 Tab = "SWITCH_TARGET"
-Enter = "SWITCH_CAR"
+Return = "SWITCH_CAR"
 Escape = "FREE_CAM"
 
 [CAMERA]
