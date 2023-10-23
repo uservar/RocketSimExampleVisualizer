@@ -12,7 +12,7 @@ def main():
     rs.init(meshes_path)
 
     # setup rocketsim arena
-    arena = rs.Arena(rs.GameMode.SOCCAR)
+    arena = rs.Arena(rs.GameMode.HOOPS, 120)
     print(f"Arena tick rate: {arena.tick_rate}")
 
     # set mutators

@@ -144,30 +144,42 @@ class Visualizer:
         self.text_item.setDepthValue(2)
         self.addItem(self.text_item)
 
-        if self.arena.game_mode == rs.GameMode.SOCCAR:
-            # Add surface grids
-            grid_spacing = 1024
+        grid_x_subdivs = 4
+        grid_y_subdivs = 5
+        grid_z_subdivs = 2
+
+        if self.arena.game_mode != rs.GameMode.THE_VOID:
+            if self.arena.game_mode == rs.GameMode.HOOPS:
+                field_type = "hoops"
+                FIELD_EXTENT_X = HOOPS_EXTENT_X
+                FIELD_EXTENT_Y = HOOPS_EXTENT_Y
+                FIELD_EXTENT_Z = HOOPS_EXTENT_Z
+            else:
+                field_type = "soccar"
+                FIELD_EXTENT_X = SOCCAR_EXTENT_X
+                FIELD_EXTENT_Y = SOCCAR_EXTENT_Y
+                FIELD_EXTENT_Z = SOCCAR_EXTENT_Z
 
             # ground grids
             grid_item = gl.GLGridItem()
-            grid_item.setSize(SOCCAR_EXTENT_X * 2, SOCCAR_EXTENT_Y * 2, 1)
-            grid_item.setSpacing(grid_spacing, grid_spacing, 1)
+            grid_item.setSize(FIELD_EXTENT_X * 2, FIELD_EXTENT_Y * 2, 1)
+            grid_item.setSpacing(FIELD_EXTENT_X / grid_x_subdivs, FIELD_EXTENT_Y / grid_y_subdivs, 1)
             self.addItem(grid_item)
 
             # ceiling grid
             grid_item = gl.GLGridItem()
-            grid_item.setSize(SOCCAR_EXTENT_X * 2, SOCCAR_EXTENT_Y * 2, 1)
-            grid_item.setSpacing(grid_spacing, grid_spacing, 1)
-            grid_item.translate(0, 0, SOCCAR_EXTENT_Z)
+            grid_item.setSize(FIELD_EXTENT_X * 2, FIELD_EXTENT_Y * 2, 1)
+            grid_item.setSpacing(FIELD_EXTENT_X / grid_x_subdivs, FIELD_EXTENT_Y / grid_y_subdivs, 1)
+            grid_item.translate(0, 0, FIELD_EXTENT_Z)
             self.addItem(grid_item)
 
             # side wall grids
             for sign in (1, -1):
                 grid_item = gl.GLGridItem()
-                grid_item.setSize(SOCCAR_EXTENT_Z, SOCCAR_EXTENT_Y * 2, 1)
-                grid_item.setSpacing(grid_spacing, grid_spacing, 1)
+                grid_item.setSize(FIELD_EXTENT_Z, FIELD_EXTENT_Y * 2, 1)
+                grid_item.setSpacing(FIELD_EXTENT_Z / grid_z_subdivs, FIELD_EXTENT_Y / grid_y_subdivs, 1)
                 grid_item.rotate(90, 0, 1, 0)
-                grid_item.translate(sign * SOCCAR_EXTENT_X, 0, SOCCAR_EXTENT_Z / 2)
+                grid_item.translate(sign * FIELD_EXTENT_X, 0, FIELD_EXTENT_Z / 2)
                 self.addItem(grid_item)
 
             # Create soccar_field
@@ -177,14 +189,22 @@ class Visualizer:
                          "glOptions": {GL_DEPTH_TEST: False, GL_BLEND: True, GL_CULL_FACE: True,
                                        'glBlendFunc': (GL_SRC_ALPHA, GL_ONE)}}
 
-            soccar_field_v, soccar_field_f = get_arena_mesh(self.meshes_path, "soccar")
+            soccar_field_v, soccar_field_f = get_arena_mesh(self.meshes_path, field_type)
             soccar_field_mi = gl.GLMeshItem(vertexes=soccar_field_v,
                                             faces=soccar_field_f, **mi_kwargs)
             self.addItem(soccar_field_mi)
 
         # Create ball geometry
-        ball_radius = self.arena.ball.get_radius()
-        ball_md = gl.MeshData.sphere(rows=8, cols=16, radius=ball_radius)
+        if self.arena.game_mode == rs.GameMode.SNOWDAY:
+            ball_radius = PUCK_RADIUS
+            ball_md = gl.MeshData.cylinder(rows=2, cols=16, radius=(
+                PUCK_RADIUS, PUCK_RADIUS), length=PUCK_HEIGHT)
+            ball_md._vertexes = np.array(ball_md._vertexes) - np.array([0, 0, PUCK_HEIGHT / 2])
+            # print(ball_md._vertexes)
+            # quit()
+        else:
+            ball_radius = self.arena.ball.get_radius()
+            ball_md = gl.MeshData.sphere(rows=8, cols=16, radius=ball_radius)
         self.ball_mi = gl.GLMeshItem(meshdata=ball_md, smooth=False,
                                      drawFaces=True, drawEdges=True,
                                      color=(0.1, 0.1, 0.1, 1),
@@ -267,6 +287,7 @@ class Visualizer:
 
         big_pad_box_md = gl.MeshData(vertexes=box_verts * pad_sq_dims_big, faces=box_faces)
         small_pad_box_md = gl.MeshData(vertexes=box_verts * pad_sq_dims_small, faces=box_faces)
+
         for pad in self.arena.get_boost_pads():
             # pad hitbox
             pad_box_md = big_pad_box_md if pad.is_big else small_pad_box_md
@@ -361,21 +382,17 @@ class Visualizer:
 
         # plot ball data
         ball_state = self.arena.ball.get_state()
+        ball_angles = ball_state.rot_mat.as_angle()
 
-        # approx ball spin
-        ball_angvel_np = np.array([ball_state.ang_vel.x, -ball_state.ang_vel.y, ball_state.ang_vel.z])
-        rot_angle = np.linalg.norm(ball_angvel_np)
-        rot_axis = ball_angvel_np / max(1e-9, rot_angle)
-        delta_rot_angle = rot_angle * self.tick_skip / self.arena.tick_rate
-
-        self.ball_mi.rotate(delta_rot_angle / math.pi * 180, *rot_axis, local=False)
+        self.ball_mi.resetTransform()
 
         # location
-        ball_transform = self.ball_mi.transform()
-        ball_transform[0, 3] = -ball_state.pos.x
-        ball_transform[1, 3] = ball_state.pos.y
-        ball_transform[2, 3] = ball_state.pos.z
-        self.ball_mi.setTransform(ball_transform)
+        self.ball_mi.translate(-ball_state.pos.x, ball_state.pos.y, ball_state.pos.z)
+
+        # rotation
+        self.ball_mi.rotate(ball_angles.yaw / math.pi * 180, 0, 0, -1, local=True)
+        self.ball_mi.rotate(ball_angles.pitch / math.pi * 180, 0, 1, 0, local=True)
+        self.ball_mi.rotate(ball_angles.roll / math.pi * 180, -1, 0, 0, local=True)
 
         # ball ground projection
         self.ball_proj.resetTransform()
@@ -471,7 +488,8 @@ class Visualizer:
         if self.car_mi_dict:
             car = self.arena.get_car_from_id(self.car_id, None)
             car_state = car.get_state()
-            var_names += ["car_state"]
+            last_controls = car_state.last_controls
+            var_names += ["car_state", "last_controls"]
 
         for var_name in var_names:
             var = locals()[var_name]
