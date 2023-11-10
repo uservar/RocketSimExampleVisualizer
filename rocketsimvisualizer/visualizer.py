@@ -182,6 +182,15 @@ class Visualizer:
                 grid_item.translate(sign * FIELD_EXTENT_X, 0, FIELD_EXTENT_Z / 2)
                 self.addItem(grid_item)
 
+            if self.arena.game_mode == rs.GameMode.HOOPS:
+                for sign in (1, -1):
+                    grid_item = gl.GLGridItem()
+                    grid_item.setSize(FIELD_EXTENT_X * 2, FIELD_EXTENT_Z, 1)
+                    grid_item.setSpacing(FIELD_EXTENT_X / grid_x_subdivs, FIELD_EXTENT_Z / grid_z_subdivs, 1)
+                    grid_item.rotate(90, 1, 0, 0)
+                    grid_item.translate(0, sign * FIELD_EXTENT_Y, FIELD_EXTENT_Z / 2)
+                    self.addItem(grid_item)
+
             # Create soccar_field
             mi_kwargs = {"smooth": False, "drawFaces": True, "drawEdges": True,
                          "edgeColor": (0.125, 0.125, 0.125, 1),
