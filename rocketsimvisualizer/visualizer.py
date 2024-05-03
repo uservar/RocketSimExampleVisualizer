@@ -209,8 +209,6 @@ class Visualizer:
             ball_md = gl.MeshData.cylinder(rows=2, cols=16, radius=(
                 PUCK_RADIUS, PUCK_RADIUS), length=PUCK_HEIGHT)
             ball_md._vertexes = np.array(ball_md._vertexes) - np.array([0, 0, PUCK_HEIGHT / 2])
-            # print(ball_md._vertexes)
-            # quit()
         else:
             ball_radius = self.arena.ball.get_radius()
             ball_md = gl.MeshData.sphere(rows=8, cols=16, radius=ball_radius)
