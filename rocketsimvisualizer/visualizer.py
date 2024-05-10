@@ -389,17 +389,21 @@ class Visualizer:
 
         # plot ball data
         ball_state = self.arena.ball.get_state()
-        ball_angles = ball_state.rot_mat.as_angle()
 
-        self.ball_mi.resetTransform()
+        # approx ball spin
+        ball_angvel_np = np.array([ball_state.ang_vel.x, -ball_state.ang_vel.y, ball_state.ang_vel.z])
+        rot_angle = np.linalg.norm(ball_angvel_np)
+        rot_axis = ball_angvel_np / max(1e-9, rot_angle)
+        delta_rot_angle = rot_angle * self.tick_skip / self.arena.tick_rate
+
+        self.ball_mi.rotate(delta_rot_angle / math.pi * 180, *rot_axis, local=False)
 
         # location
-        self.ball_mi.translate(-ball_state.pos.x, ball_state.pos.y, ball_state.pos.z)
-
-        # rotation
-        self.ball_mi.rotate(ball_angles.yaw / math.pi * 180, 0, 0, -1, local=True)
-        self.ball_mi.rotate(ball_angles.pitch / math.pi * 180, 0, 1, 0, local=True)
-        self.ball_mi.rotate(ball_angles.roll / math.pi * 180, -1, 0, 0, local=True)
+        ball_transform = self.ball_mi.transform()
+        ball_transform[0, 3] = -ball_state.pos.x
+        ball_transform[1, 3] = ball_state.pos.y
+        ball_transform[2, 3] = ball_state.pos.z
+        self.ball_mi.setTransform(ball_transform)
 
         # ball ground projection
         self.ball_proj.resetTransform()
