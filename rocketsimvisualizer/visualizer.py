@@ -506,6 +506,8 @@ class Visualizer:
             var = locals()[var_name]
             text += f"\n{var_name}:\n"
             for key in dir(var):
+                if "last_rel_dodge_torque" in key:
+                    continue
                 value = getattr(var, key)
                 if not key.startswith("_"):
                     if not isinstance(value, (bool, int)):

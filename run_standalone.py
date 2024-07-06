@@ -12,12 +12,13 @@ def main():
     rs.init(meshes_path)
 
     # setup rocketsim arena
-    arena = rs.Arena(rs.GameMode.SOCCAR, tick_rate=120)
+    arena_config = rs.ArenaConfig()
+    arena = rs.Arena(rs.GameMode.SOCCAR, tick_rate=120, config=arena_config)
     print(f"Arena tick rate: {arena.tick_rate}")
 
     # set mutators
     mutator_config = arena.get_mutator_config()
-    mutator_config.boost_used_per_second = 0  # infinite boost
+    # mutator_config.boost_used_per_second = 0  # infinite boost
     arena.set_mutator_config(mutator_config)
 
     # set goal score callback

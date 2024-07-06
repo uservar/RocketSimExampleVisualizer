@@ -3,4 +3,4 @@ pyqtgraph
 pyopengl
 tomli
 inputs
-RocketSim>=2.0
+RocketSim>=2.1
