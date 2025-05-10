@@ -6,7 +6,7 @@ from collections import defaultdict
 
 # Get key mappings from Qt namespace
 qt_keys = (
-    (getattr(QtCore.Qt, attr), attr[4:])
+    (getattr(QtCore.Qt.Key, attr), attr[4:])
     for attr in dir(QtCore.Qt)
     if attr.startswith("Key_")
 )
@@ -30,6 +30,7 @@ class KeyboardController(GenericController):
     def update_controls(self, event, is_pressed=True):
         if event.isAutoRepeat():
             return
+
         key = keys_mapping[event.key()]
         if key in self.input_dict.keys():
             self.is_pressed_dict[self.input_dict[key]] = is_pressed

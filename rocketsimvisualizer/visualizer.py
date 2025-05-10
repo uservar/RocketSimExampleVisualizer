@@ -160,7 +160,7 @@ class Visualizer:
                 FIELD_EXTENT_Y = SOCCAR_EXTENT_Y
                 FIELD_EXTENT_Z = SOCCAR_EXTENT_Z
 
-            # ground grids
+            # ground grid
             grid_item = gl.GLGridItem()
             grid_item.setSize(FIELD_EXTENT_X * 2, FIELD_EXTENT_Y * 2, 1)
             grid_item.setSpacing(FIELD_EXTENT_X / grid_x_subdivs, FIELD_EXTENT_Y / grid_y_subdivs, 1)
@@ -475,7 +475,7 @@ class Visualizer:
                 if not self.target_cam and not self.manual_swivel:
                     # non-target_cam cam
                     car_vel_2d_norm = math.sqrt(car_state.vel.y ** 2 + car_state.vel.x ** 2)
-                    if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel dir changes
+                    if car_vel_2d_norm > 50:  # don't be sensitive to near 0 vel changes
                         car_vel_azimuth = math.atan2(car_state.vel.y, car_state.vel.x)
                         self.w.opts["azimuth"] = -car_vel_azimuth / math.pi * 180
                         self.w.opts["elevation"] = self.cam_dict["ANGLE"]
@@ -554,7 +554,7 @@ class Visualizer:
             desired_dt = 1 / self.fps - tick_time_dt - self.tick_time_drift
             if desired_dt < 1e-7:
                 break
-            elif desired_dt > 5e-4:  # sleep_unfil is innacurate below this threshold on windows
+            elif desired_dt > 5e-4:  # sleep_until is innacurate below this threshold on windows
                 sleep(desired_dt - 5e-4)
         tick_time = time.perf_counter()
         self.tick_time_drift += tick_time - self.tick_time - 1 / self.fps
