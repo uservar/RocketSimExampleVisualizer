@@ -6,8 +6,8 @@ from collections import defaultdict
 
 # Get key mappings from Qt namespace
 qt_keys = (
-    (getattr(QtCore.Qt.Key, attr), attr[4:])
-    for attr in dir(QtCore.Qt)
+    (getattr(QtCore.Qt.Key, attr).value, attr[4:])
+    for attr in dir(QtCore.Qt.Key)
     if attr.startswith("Key_")
 )
 keys_mapping = defaultdict(lambda: "unknown", qt_keys)

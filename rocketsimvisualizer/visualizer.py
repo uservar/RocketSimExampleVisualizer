@@ -43,30 +43,29 @@ QtGui.QSurfaceFormat.setDefaultFormat(_format)
 
 cShader = ShaderProgram('cShader', [
     VertexShader("""
-        varying vec3 normal;
-        varying vec4 pos;
+#version 330
+layout(location = 0) in vec3 a_position;
+uniform mat4 u_mvp;
+out vec3 fragPosition;
 
-        void main() {
-            normal = normalize(gl_Normal);
-            gl_FrontColor = gl_Color;
-            gl_BackColor = gl_Color;
-            gl_Position = ftransform();
-            pos = gl_Vertex;
-        }
+void main() {
+    fragPosition = a_position;
+    gl_Position = u_mvp * vec4(a_position, 1.0);
+}
     """),
     FragmentShader("""
-        varying vec3 normal;
-        varying vec4 pos;
+#version 330
+in vec3 fragPosition;
+out vec4 outColor;
 
-        void main() {
-            vec3 blue = vec3(0.0, 0.4, 0.8);
-            vec3 orange = vec3(1.0, 0.2, 0.1);
-            float xyNorm_2 = pow(normal.x, 2.0) + pow(normal.y, 2.0);
-            vec3 normPos = vec3(pos[0] / 4096.0, pos[1] / 6000.0, pos[2] / 2048.0);
-            vec3 color = max(normPos.y, 0.0) * orange - min(normPos.y, 0.0) * blue;
-            color = 0.25 * xyNorm_2 * color;
-            gl_FragColor = vec4(color, 1.0);
-        }
+void main() {
+    vec3 blue = vec3(0.25, 0.5, 1.0);
+    vec3 orange = vec3(1.0, 0.25, 0.15);
+    float normPos = fragPosition.y / 5120.0;
+    vec3 sideColor = max(normPos, 0.0) * orange - min(normPos, 0.0) * blue;
+    vec3 color = sideColor + (1.0 - abs(normPos)) * 0.2;
+    outColor = vec4(color, 0.3);
+}
     """)
 ])
 
@@ -91,7 +90,6 @@ class Visualizer:
         self.arena = arena
         self.meshes_path = meshes_path
         self.fps = fps
-        self.tick_skip = round(tick_skip)
         self.step_arena = step_arena
         self.enable_debug_text = enable_debug_text
         self.overwrite_controls = overwrite_controls
@@ -105,6 +103,8 @@ class Visualizer:
 
         if tick_skip is None:
             self.tick_skip = round(self.arena.tick_rate / fps)
+        else:
+            self.tick_skip = round(tick_skip)
 
         if self.config_dict is None:
             print("Using default configs")
@@ -570,7 +570,6 @@ class Visualizer:
 
 
 class VisualizerThread(threading.Thread):
-
     def __init__(self, *args, **kwargs):
         super(VisualizerThread, self).__init__()
         self.args = args
