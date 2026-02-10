@@ -19,16 +19,16 @@ class GenericController:
     # These methods will be overwritten later
     @classmethod
     def switch_car():
-        pass
+        raise NotImplementedError
 
     @classmethod
     def switch_target():
-        pass
+        raise NotImplementedError
 
     @classmethod
     def toggle_target_cam():
-        pass
+        raise NotImplementedError
 
     @classmethod
     def toggle_free_cam():
-        pass
+        raise NotImplementedError

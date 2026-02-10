@@ -3,8 +3,7 @@ import RocketSim as rs
 import tomli
 
 with open("rsvconfig.toml", "rb") as file:
-    config_dict = tomli.load(file)
-
+    config_dict = tomli.load(file) 
 
 def main():
     # init rocketsim

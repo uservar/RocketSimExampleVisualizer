@@ -1,9 +1,9 @@
 from rocketsimvisualizer import KeyboardController, GenericController, GL2DTextItem
 from rocketsimvisualizer.arena_mesh import get_arena_mesh
 from rocketsimvisualizer.constants import *
+from rocketsimvisualizer.shader import cShader
 
 from pyqtgraph.Qt import QtCore, QtGui
-from pyqtgraph.opengl.shaders import ShaderProgram, VertexShader, FragmentShader
 from OpenGL.GL import *
 
 import pyqtgraph as pg
@@ -19,17 +19,6 @@ import math
 
 import pathlib
 import tomli
-import platform
-
-from time import sleep
-
-if platform.system() == "Windows":
-    python_version_minor = int(platform.python_version_tuple()[1])
-    if python_version_minor < 11:
-        import sleep_until
-
-        def sleep(dt):
-            sleep_until.sleep_until(time.time() + dt)
 
 current_dir = pathlib.Path(__file__).parent
 
@@ -41,46 +30,18 @@ _format = QtGui.QSurfaceFormat()
 _format.setSwapInterval(0)
 QtGui.QSurfaceFormat.setDefaultFormat(_format)
 
-cShader = ShaderProgram('cShader', [
-    VertexShader("""
-#version 330
-layout(location = 0) in vec3 a_position;
-uniform mat4 u_mvp;
-out vec3 fragPosition;
-
-void main() {
-    fragPosition = a_position;
-    gl_Position = u_mvp * vec4(a_position, 1.0);
-}
-    """),
-    FragmentShader("""
-#version 330
-in vec3 fragPosition;
-out vec4 outColor;
-
-void main() {
-    vec3 blue = vec3(0.25, 0.5, 1.0);
-    vec3 orange = vec3(1.0, 0.25, 0.15);
-    float normPos = fragPosition.y / 5120.0;
-    vec3 sideColor = max(normPos, 0.0) * orange - min(normPos, 0.0) * blue;
-    vec3 color = sideColor + (1.0 - abs(normPos)) * 0.2;
-    outColor = vec4(color, 0.3);
-}
-    """)
-])
-
-
 class Visualizer:
-    def __init__(self, arena,
-                 meshes_path="collision_meshes",
-                 fps=60,
-                 step_arena=False,
-                 tick_skip: int = None,
-                 enable_debug_text=True,
-                 overwrite_controls=False,
-                 config_dict: dict = None,
-                 controller_class: GenericController = None,
-                 **kwargs):
+    def __init__(
+        self, arena,
+        meshes_path="collision_meshes",
+        fps=60,
+        step_arena=False,
+        tick_skip: int = None,
+        enable_debug_text=True,
+        overwrite_controls=False,
+        config_dict: dict = None,
+        controller_class: GenericController = None,
+        **kwargs):
 
         self.app = pg.mkQApp()
         self.w = gl.GLViewWidget()
@@ -163,13 +124,15 @@ class Visualizer:
             # ground grid
             grid_item = gl.GLGridItem()
             grid_item.setSize(FIELD_EXTENT_X * 2, FIELD_EXTENT_Y * 2, 1)
-            grid_item.setSpacing(FIELD_EXTENT_X / grid_x_subdivs, FIELD_EXTENT_Y / grid_y_subdivs, 1)
+            grid_item.setSpacing(FIELD_EXTENT_X / grid_x_subdivs,
+                FIELD_EXTENT_Y / grid_y_subdivs, 1)
             self.addItem(grid_item)
 
             # ceiling grid
             grid_item = gl.GLGridItem()
             grid_item.setSize(FIELD_EXTENT_X * 2, FIELD_EXTENT_Y * 2, 1)
-            grid_item.setSpacing(FIELD_EXTENT_X / grid_x_subdivs, FIELD_EXTENT_Y / grid_y_subdivs, 1)
+            grid_item.setSpacing(FIELD_EXTENT_X / grid_x_subdivs,
+                FIELD_EXTENT_Y / grid_y_subdivs, 1)
             grid_item.translate(0, 0, FIELD_EXTENT_Z)
             self.addItem(grid_item)
 
@@ -177,7 +140,8 @@ class Visualizer:
             for sign in (1, -1):
                 grid_item = gl.GLGridItem()
                 grid_item.setSize(FIELD_EXTENT_Z, FIELD_EXTENT_Y * 2, 1)
-                grid_item.setSpacing(FIELD_EXTENT_Z / grid_z_subdivs, FIELD_EXTENT_Y / grid_y_subdivs, 1)
+                grid_item.setSpacing(FIELD_EXTENT_Z / grid_z_subdivs,
+                    FIELD_EXTENT_Y / grid_y_subdivs, 1)
                 grid_item.rotate(90, 0, 1, 0)
                 grid_item.translate(sign * FIELD_EXTENT_X, 0, FIELD_EXTENT_Z / 2)
                 self.addItem(grid_item)
@@ -186,42 +150,41 @@ class Visualizer:
                 for sign in (1, -1):
                     grid_item = gl.GLGridItem()
                     grid_item.setSize(FIELD_EXTENT_X * 2, FIELD_EXTENT_Z, 1)
-                    grid_item.setSpacing(FIELD_EXTENT_X / grid_x_subdivs, FIELD_EXTENT_Z / grid_z_subdivs, 1)
+                    grid_item.setSpacing(FIELD_EXTENT_X / grid_x_subdivs,
+                        FIELD_EXTENT_Z / grid_z_subdivs, 1)
                     grid_item.rotate(90, 1, 0, 0)
                     grid_item.translate(0, sign * FIELD_EXTENT_Y, FIELD_EXTENT_Z / 2)
                     self.addItem(grid_item)
 
-            # Create soccar_field
-            mi_kwargs = {"smooth": False, "drawFaces": True, "drawEdges": True,
-                         "edgeColor": (0.125, 0.125, 0.125, 1),
-                         "shader": cShader,
-                         "glOptions": {GL_DEPTH_TEST: False, GL_BLEND: True, GL_CULL_FACE: True,
-                                       'glBlendFunc': (GL_SRC_ALPHA, GL_ONE)}}
+            # Create field
+            mi_kwargs = {
+                "smooth": False, "drawFaces": True, "drawEdges": True,
+                "edgeColor": (0.125, 0.125, 0.125, 1),
+                "shader": cShader,
+                "glOptions": {GL_DEPTH_TEST: False, GL_BLEND: True, GL_CULL_FACE: True,
+                'glBlendFunc': (GL_SRC_ALPHA, GL_ONE)}
+            }
 
-            soccar_field_v, soccar_field_f = get_arena_mesh(self.meshes_path, field_type)
-            soccar_field_mi = gl.GLMeshItem(vertexes=soccar_field_v,
-                                            faces=soccar_field_f, **mi_kwargs)
-            self.addItem(soccar_field_mi)
+            field_v, field_f = get_arena_mesh(self.meshes_path, field_type)
+            field_mi = gl.GLMeshItem(vertexes=field_v, faces=field_f, **mi_kwargs)
+            self.addItem(field_mi)
 
         # Create ball geometry
         if self.arena.game_mode == rs.GameMode.SNOWDAY:
             ball_radius = PUCK_RADIUS
-            ball_md = gl.MeshData.cylinder(rows=2, cols=16, radius=(
-                PUCK_RADIUS, PUCK_RADIUS), length=PUCK_HEIGHT)
+            ball_md = gl.MeshData.cylinder(
+                rows=2, cols=16, radius=(PUCK_RADIUS, PUCK_RADIUS), length=PUCK_HEIGHT)
             ball_md._vertexes = np.array(ball_md._vertexes) - np.array([0, 0, PUCK_HEIGHT / 2])
         else:
             ball_radius = self.arena.ball.get_radius()
             ball_md = gl.MeshData.sphere(rows=8, cols=16, radius=ball_radius)
-        self.ball_mi = gl.GLMeshItem(meshdata=ball_md, smooth=False,
-                                     drawFaces=True, drawEdges=True,
-                                     color=(0.1, 0.1, 0.1, 1),
-                                     edgeColor=self.white_color)
+        self.ball_mi = gl.GLMeshItem(meshdata=ball_md, smooth=False, drawFaces=True, drawEdges=True, color=(0.1, 0.1, 0.1, 1), edgeColor=self.white_color)
         self.addItem(self.ball_mi)
 
         # Create ground projection for the ball
         ball_proj_md = gl.MeshData.cylinder(rows=1, cols=16, length=0, radius=round(ball_radius))
-        self.ball_proj = gl.GLMeshItem(meshdata=ball_proj_md, smooth=False, drawFaces=False,
-                                       drawEdges=True, edgeColor=self.white_color)
+        self.ball_proj = gl.GLMeshItem(meshdata=ball_proj_md, smooth=False,
+            drawFaces=False, drawEdges=True, edgeColor=self.white_color)
         self.addItem(self.ball_proj)
 
         self.pads_mi = []
@@ -250,9 +213,7 @@ class Visualizer:
 
             hitbox_verts = box_verts * hitbox_size + hitbox_offset * [-1, 1, 1]
 
-            car_mi = gl.GLMeshItem(vertexes=hitbox_verts, faces=box_faces,
-                                   smooth=False, drawFaces=True, drawEdges=True,
-                                   edgeColor=self.white_color)
+            car_mi = gl.GLMeshItem(vertexes=hitbox_verts, faces=box_faces, smooth=False, drawFaces=True, drawEdges=True, edgeColor=self.white_color)
 
             self.addItem(car_mi)
             self.car_mi_dict[car.id] = car_mi
@@ -269,10 +230,10 @@ class Visualizer:
             for wheel_pair in (car_config.front_wheels, car_config.back_wheels):
                 wheel_radius = wheel_pair.wheel_radius
                 wheel_md = gl.MeshData.cylinder(rows=1, cols=8, length=0,
-                                                radius=round(wheel_radius))
+                    radius=round(wheel_radius))
                 for sign in (1, -1):
-                    wheel_mi = gl.GLMeshItem(meshdata=wheel_md, drawFaces=False, drawEdges=True,
-                                             smooth=False, edgeColor=self.white_color)
+                    wheel_mi = gl.GLMeshItem(meshdata=wheel_md, drawFaces=False,
+                        drawEdges=True, smooth=False, edgeColor=self.white_color)
                     wheel_pos = -wheel_pair.connection_point_offset.as_numpy()
                     wheel_pos[1] *= sign
                     wheel_pos[2] += wheel_radius + 4  # guesstimate of compressed suspension
@@ -299,8 +260,8 @@ class Visualizer:
             # pad hitbox
             pad_box_md = big_pad_box_md if pad.is_big else small_pad_box_md
             pad_box_edge_color = self.white_color if pad.is_big else self.white_color / 2
-            pad_box_mi = gl.GLMeshItem(meshdata=pad_box_md, drawFaces=False, drawEdges=True,
-                                       edgeColor=pad_box_edge_color)
+            pad_box_mi = gl.GLMeshItem(meshdata=pad_box_md, drawFaces=False,
+                drawEdges=True, edgeColor=pad_box_edge_color)
             pad_pos = pad.get_pos()
             pad_box_mi.translate(-pad_pos.x, pad_pos.y, pad_pos.z)
             self.pads_mi.append(pad_box_mi)
@@ -470,7 +431,7 @@ class Visualizer:
                 car_state = car.get_state()
                 # center camera around the car
                 self.w.opts["center"] = pg.Vector(-car_state.pos.x, car_state.pos.y,
-                                                  car_state.pos.z + self.cam_dict["HEIGHT"])
+                    car_state.pos.z + self.cam_dict["HEIGHT"])
 
                 if not self.target_cam and not self.manual_swivel:
                     # non-target_cam cam
@@ -506,7 +467,7 @@ class Visualizer:
             var = locals()[var_name]
             text += f"\n{var_name}:\n"
             for key in dir(var):
-                if "last_rel_dodge_torque" in key:
+                if "last_rel_dodge_torque" in key:  # skip deprecated alias
                     continue
                 value = getattr(var, key)
                 if not key.startswith("_"):
@@ -555,7 +516,7 @@ class Visualizer:
             if desired_dt < 1e-7:
                 break
             elif desired_dt > 5e-4:  # sleep_until is innacurate below this threshold on windows
-                sleep(desired_dt - 5e-4)
+                time.sleep(desired_dt - 5e-4)
         tick_time = time.perf_counter()
         self.tick_time_drift += tick_time - self.tick_time - 1 / self.fps
         self.tick_time_drift = max(min(self.tick_time_drift, 1 / self.fps), - 1 / self.fps)

@@ -3,8 +3,8 @@ import numpy as np
 
 
 def get_arena_mesh(meshes_path="collision_meshes", subfolder="soccar"):
-    soccar_field_v = []
-    soccar_field_f = []
+    field_v = []
+    field_f = []
 
     resolved_path = Path(meshes_path).resolve()
 
@@ -14,7 +14,7 @@ def get_arena_mesh(meshes_path="collision_meshes", subfolder="soccar"):
             tris = np.fromfile(file, "3i", count=num_tris)
             verts = np.fromfile(file, "3f", count=num_verts) * 50
 
-            soccar_field_f += list(tris + len(soccar_field_v))
-            soccar_field_v += list(verts)
+            field_f += list(tris + len(field_v))
+            field_v += list(verts)
 
-    return soccar_field_v, soccar_field_f
+    return field_v, field_f
