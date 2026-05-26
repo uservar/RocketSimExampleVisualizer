@@ -18,12 +18,12 @@ import time
 import math
 
 import pathlib
-import tomli
+import tomllib
 
 current_dir = pathlib.Path(__file__).parent
 
 with open(current_dir / "rsvconfig-default.toml", "rb") as file:
-    default_config_dict = tomli.load(file)
+    default_config_dict = tomllib.load(file)
 
 # disable vsync
 _format = QtGui.QSurfaceFormat()
