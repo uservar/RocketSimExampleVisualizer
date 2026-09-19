@@ -1,5 +1,5 @@
 PyQt5
-pyqtgraph
+pyqtgraph==0.14.0
 pyopengl
 inputs
 RocketSim>=2.1

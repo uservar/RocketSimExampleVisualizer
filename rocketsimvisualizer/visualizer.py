@@ -361,10 +361,11 @@ class Visualizer:
 
         # location
         ball_transform = self.ball_mi.transform()
-        ball_transform[0, 3] = -ball_state.pos.x
-        ball_transform[1, 3] = ball_state.pos.y
-        ball_transform[2, 3] = ball_state.pos.z
-        self.ball_mi.setTransform(ball_transform)
+        m = ball_transform.matrix().copy()
+        m[0, 3] = -ball_state.pos.x
+        m[1, 3] = ball_state.pos.y
+        m[2, 3] = ball_state.pos.z
+        self.ball_mi.setTransform(pg.Transform3D(m))
 
         # ball ground projection
         self.ball_proj.resetTransform()

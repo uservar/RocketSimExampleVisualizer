@@ -3,14 +3,23 @@ from rocketsimvisualizer import GenericController
 from pyqtgraph.Qt import QtCore, QtGui
 from collections import defaultdict
 
+keys_mapping = defaultdict(lambda: "unknown")
 
-# Get key mappings from Qt namespace
-qt_keys = (
-    (getattr(QtCore.Qt.Key, attr), attr[4:])
-    for attr in dir(QtCore.Qt)
-    if attr.startswith("Key_")
-)
-keys_mapping = defaultdict(lambda: "unknown", qt_keys)
+for attr in dir(QtCore.Qt):
+    if attr.startswith("Key_"):
+        try:
+            keys_mapping[getattr(QtCore.Qt, attr)] = attr[4:]
+        except (AttributeError, TypeError):
+            pass
+
+# For different versions of PyQt
+if hasattr(QtCore.Qt, 'Key'):
+    for attr in dir(QtCore.Qt.Key):
+        if attr.startswith("Key_"):
+            try:
+                keys_mapping[getattr(QtCore.Qt.Key, attr)] = attr[4:]
+            except (AttributeError, TypeError):
+                pass
 
 
 class KeyboardController(GenericController):
